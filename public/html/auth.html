@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Office — Sign In</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sora: ['Sora', 'sans-serif'],
+            dm:   ['DM Sans', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50:  '#eef3ff',
+              100: '#dce6ff',
+              200: '#b9cdff',
+              300: '#85a9ff',
+              400: '#5580ff',
+              500: '#3b6ef6',
+              600: '#2550eb',
+              700: '#1c3ed8',
+              800: '#1d34b0',
+              900: '#1d308b',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ══ Reset & Base ══ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0a0f1e;
+      color: #1a2340;
+    }
+
+    /* ══ Loading Screen ══ */
+    #loader {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #06091a;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity .6s ease, visibility .6s ease;
+    }
+    #loader.out { opacity: 0; visibility: hidden; pointer-events: none; }
+    .loader-ring {
+      width: 54px; height: 54px;
+      border: 3px solid rgba(59,110,246,.2);
+      border-top-color: #3b6ef6;
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══ Scroll-free layout ══ */
+    .page {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ══ Navbar ══ */
+    .navbar {
+      position: relative; z-index: 100;
+      padding: 0 32px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(6,9,26,.7);
+      border-bottom: 1px solid rgba(59,110,246,.12);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      flex-shrink: 0;
+    }
+
+    /* ══ Split layout ══ */
+    .split {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+    @media (max-width: 900px) {
+      .split { grid-template-columns: 1fr; }
+      .left-panel { display: none; }
+    }
+
+    /* ══ Left Panel (illustration side) ══ */
+    .left-panel {
+      position: relative;
+      background: linear-gradient(135deg, #06091a 0%, #0c1535 50%, #0f1d4a 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 48px 40px;
+      overflow: hidden;
+    }
+
+    /* ══ Blob animations ══ */
+    .blob {
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); pointer-events: none; opacity: 0;
+    }
+    .blob-a { width: 500px; height: 500px; background: radial-gradient(circle, #1d3dd8 0%, #3b6ef6 50%, transparent 80%); top: -100px; left: -120px; animation: bA 18s ease-in-out infinite alternate; }
+    .blob-b { width: 380px; height: 380px; background: radial-gradient(circle, #6366f1 0%, #818cf8 60%, transparent 80%); bottom: -80px; right: -80px;  animation: bB 14s ease-in-out infinite alternate; }
+    .blob-c { width: 260px; height: 260px; background: radial-gradient(circle, #0ea5e9 0%, #38bdf8 60%, transparent 80%); top: 40%; left: 40%; animation: bC 12s ease-in-out infinite alternate; }
+    @keyframes bA { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(40px,60px) scale(1.1)} }
+    @keyframes bB { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(-30px,-40px) scale(1.08)} }
+    @keyframes bC { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(20px,-30px) scale(1.12)} }
+
+    /* ══ Grid dots background ══ */
+    .dot-grid {
+      position: absolute; inset: 0; pointer-events: none;
+      background-image: radial-gradient(circle, rgba(99,130,246,.18) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+
+    /* ══ Floating UI cards ══ */
+    .ui-card {
+      position: absolute;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 14px 18px;
+      color: #e2e8f0;
+      font-family: 'Sora', sans-serif;
+      font-size: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.3);
+      opacity: 0;
+    }
+    .card-f1 { top: 14%; left: 8%; animation: floatA 7s ease-in-out infinite; }
+    .card-f2 { top: 22%; right: 6%; animation: floatB 9s ease-in-out infinite; }
+    .card-f3 { bottom: 20%; left: 6%; animation: floatA 8s ease-in-out infinite 1s; }
+    .card-f4 { bottom: 14%; right: 8%; animation: floatB 7s ease-in-out infinite .5s; }
+    @keyframes floatA { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+    @keyframes floatB { 0%,100%{transform:translateY(0)} 50%{transform:translateY(10px)} }
+
+    /* ══ Right Panel (form side) ══ */
+    .right-panel {
+      position: relative;
+      background: #f8faff;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 40px 24px;
+    }
+    .right-panel::-webkit-scrollbar { width: 4px; }
+    .right-panel::-webkit-scrollbar-track { background: transparent; }
+    .right-panel::-webkit-scrollbar-thumb { background: #c1d4ff; border-radius: 4px; }
+
+    /* ══ Auth Card ══ */
+    .auth-card {
+      width: 100%; max-width: 460px;
+      opacity: 0;
+    }
+
+    /* ══ Form Switcher ══ */
+    .form-panel { display: none; }
+    .form-panel.active { display: block; }
+
+    /* ══ Tab Toggle ══ */
+    .tab-wrap {
+      display: flex;
+      background: #eef3ff;
+      border-radius: 14px;
+      padding: 4px;
+      gap: 2px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1; padding: 9px 0;
+      border: none; background: none; cursor: pointer;
+      border-radius: 10px;
+      font-family: 'Sora', sans-serif;
+      font-weight: 600; font-size: 13.5px;
+      color: #64748b;
+      transition: all .28s ease;
+      position: relative; z-index: 1;
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: #2550eb;
+      box-shadow: 0 2px 12px rgba(59,110,246,.14);
+    }
+
+    /* ══ Floating Label Input ══ */
+    .field-wrap {
+      position: relative;
+      margin-bottom: 18px;
+    }
+    .field-input {
+      width: 100%;
+      padding: 18px 16px 8px;
+      border: 1.5px solid #dde4f0;
+      border-radius: 14px;
+      background: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14.5px;
+      color: #1a2340;
+      outline: none;
+      transition: border-color .25s ease, box-shadow .25s ease;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .field-input:focus {
+      border-color: #3b6ef6;
+      box-shadow: 0 0 0 3px rgba(59,110,246,.12);
+    }
+    .field-input.valid { border-color: #10b981; }
+    .field-input.invalid { border-color: #ef4444; }
+    .field-label {
+      position: absolute;
+      top: 50%; left: 16px;
+      transform: translateY(-50%);
+      font-size: 14px; color: #94a3b8;
+      pointer-events: none;
+      transition: all .22s ease;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .field-input:focus ~ .field-label,
+    .field-input:not(:placeholder-shown) ~ .field-label {
+      top: 10px; font-size: 11px; color: #3b6ef6; transform: translateY(0);
+    }
+    .field-input.valid ~ .field-label { color: #10b981; }
+    .field-input.invalid ~ .field-label { color: #ef4444; }
+    .field-icon {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      color: #94a3b8; cursor: pointer;
+      transition: color .2s ease;
+    }
+    .field-icon:hover { color: #3b6ef6; }
+    .field-check {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      width: 18px; height: 18px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; opacity: 0;
+      transition: all .25s ease;
+    }
+    .field-check.valid  { background: #d1fae5; color: #10b981; opacity: 1; }
+    .field-check.invalid{ background: #fee2e2; color: #ef4444; opacity: 1; }
+
+    /* ══ Password field ══ */
+    .pw-wrap { position: relative; }
+    .pw-toggle {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      cursor: pointer; color: #94a3b8; border: none; background: none; padding: 0;
+      transition: color .2s;
+    }
+    .pw-toggle:hover { color: #3b6ef6; }
+
+    /* ══ Password Strength ══ */
+    .pw-strength-bar {
+      display: flex; gap: 4px; margin-top: 8px;
+    }
+    .pw-seg {
+      flex: 1; height: 3px; border-radius: 99px;
+      background: #e2e8f0;
+      transition: background .35s ease;
+    }
+    .pw-label {
+      font-size: 11.5px; margin-top: 5px; color: #94a3b8;
+      font-family: 'Sora', sans-serif; font-weight: 600;
+      transition: color .3s;
+    }
+    .pw-rules { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .pw-rule {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; color: #94a3b8;
+      transition: color .25s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .pw-rule .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #dde4f0; flex-shrink: 0;
+      transition: background .25s, transform .25s;
+    }
+    .pw-rule.ok { color: #10b981; }
+    .pw-rule.ok .dot { background: #10b981; transform: scale(1.3); }
+    /* ══ Split layout — left panel disappears on mobile (width < 900px) ══ */
+    .split {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+
+    /* LEFT PANEL: visible only on desktop (>= 900px), hidden on mobile */
+    @media (max-width: 899px) {
+      .split {
+        grid-template-columns: 1fr;  /* single column for mobile */
+      }
+      .left-panel {
+        display: none !important;     /* hide completely on phones/tablets */
+      }
+    }
+
+    /* ══ Left Panel (illustration side) — DESKTOP ONLY ══ */
+    .left-panel {
+      position: relative;
+      background: linear-gradient(135deg, #06091a 0%, #0c1535 50%, #0f1d4a 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 48px 40px;
+      overflow: hidden;
+    }
+    /* ══ Gender / Account Type selectors ══ */
+    .chip-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .chip {
+      flex: 1; min-width: 100px;
+      padding: 11px 14px;
+      border: 1.5px solid #dde4f0;
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      font-family: 'Sora', sans-serif;
+      font-size: 13px; font-weight: 600;
+      color: #64748b;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      transition: all .22s ease;
+      user-select: none;
+    }
+    .chip.selected {
+      border-color: #3b6ef6;
+      background: #eef3ff;
+      color: #2550eb;
+      box-shadow: 0 0 0 3px rgba(59,110,246,.1);
+    }
+    .chip-radio { display: none; }
+
+    /* ══ Divider ══ */
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 18px 0;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: #e8eef8;
+    }
+    .divider span {
+      font-size: 12px; color: #94a3b8;
+      font-family: 'Sora', sans-serif; font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* ══ Buttons ══ */
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      border: none; border-radius: 14px;
+      background: linear-gradient(135deg, #2550eb 0%, #3b6ef6 100%);
+      color: #fff;
+      font-family: 'Sora', sans-serif; font-size: 14.5px; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all .25s ease;
+      box-shadow: 0 6px 20px rgba(59,110,246,.35);
+      letter-spacing: .01em;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(59,110,246,.45); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-google {
+      width: 100%;
+      padding: 13px;
+      border: 1.5px solid #dde4f0; border-radius: 14px;
+      background: #fff; color: #374151;
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: all .22s ease;
+    }
+    .btn-google:hover { border-color: #93b4ff; background: #f8faff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(59,110,246,.1); }
+
+    /* ══ Remember me ══ */
+    .custom-check-wrap {
+      display: flex; align-items: center; gap: 9px;
+      cursor: pointer; user-select: none;
+    }
+    .custom-check-wrap input { display: none; }
+    .custom-check-box {
+      width: 18px; height: 18px;
+      border: 2px solid #dde4f0; border-radius: 6px;
+      background: #fff; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s ease;
+    }
+    .custom-check-wrap input:checked + .custom-check-box {
+      background: #3b6ef6; border-color: #3b6ef6;
+    }
+    .custom-check-mark { display: none; }
+    .custom-check-wrap input:checked + .custom-check-box .custom-check-mark { display: block; }
+
+    /* ══ Note text ══ */
+    .note-text {
+      display: flex; align-items: flex-start; gap: 6px;
+      font-size: 11.5px; color: #6b7a99; margin-top: 6px;
+      font-family: 'DM Sans', sans-serif; line-height: 1.5;
+    }
+
+    /* ══ Security badges ══ */
+    .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; justify-content: center; }
+    .badge {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 99px;
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2);
+      font-size: 11px; font-weight: 600; color: #10b981;
+      font-family: 'Sora', sans-serif;
+    }
+
+    /* ══ Success Overlay ══ */
+    #success-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(6,9,26,.8);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden;
+      backdrop-filter: blur(8px);
+      transition: all .4s ease;
+    }
+    #success-overlay.show { opacity: 1; visibility: visible; }
+    .success-card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 48px 40px;
+      text-align: center;
+      max-width: 360px; width: 90%;
+      box-shadow: 0 32px 80px rgba(0,0,0,.3);
+      transform: scale(.85);
+      transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    #success-overlay.show .success-card { transform: scale(1); }
+    .success-ring {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981, #34d399);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 8px 24px rgba(16,185,129,.3);
+      animation: successPop .5s cubic-bezier(.34,1.56,.64,1) .2s both;
+    }
+    @keyframes successPop { from{transform:scale(0)} to{transform:scale(1)} }
+
+    /* ══ Particle canvas ══ */
+    #particle-canvas {
+      position: absolute; inset: 0; pointer-events: none; opacity: .6;
+    }
+
+    /* ══ Scrollbar (right panel) ══ */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #c1d4ff; border-radius: 4px; }
+
+    /* ══ Animated border glow on focus ══ */
+    .field-input::placeholder { color: transparent; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ LOADER ══════════════ -->
+<div id="loader">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:20px">
+    <svg width="44" height="44" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="9" fill="#3b6ef6"/>
+      <rect x="7" y="7" width="8.5" height="8.5" rx="2" fill="white" opacity=".9"/>
+      <rect x="18" y="7" width="11" height="8.5" rx="2" fill="white" opacity=".5"/>
+      <rect x="7" y="18" width="11" height="11" rx="2" fill="white" opacity=".5"/>
+      <rect x="20.5" y="18" width="8.5" height="11" rx="2" fill="white" opacity=".9"/>
+    </svg>
+    <div class="loader-ring"></div>
+  </div>
+</div>
+
+<!-- ══════════════ SUCCESS OVERLAY ══════════════ -->
+<div id="success-overlay">
+  <div class="success-card">
+    <div class="success-ring">
+      <svg width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 16 13 22 26 10"/></svg>
+    </div>
+    <h3 style="font-family:'Sora',sans-serif;font-weight:700;font-size:20px;color:#1a2340;margin-bottom:8px" id="success-title">Account Created!</h3>
+    <p style="font-size:14px;color:#64748b;font-family:'DM Sans',sans-serif;line-height:1.6" id="success-msg">Welcome to Smart Office. Your workspace is ready.</p>
+    <button onclick="closeSuccess()" class="btn-primary" style="margin-top:24px;width:auto;padding:11px 32px">Continue</button>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE ══════════════ -->
+<div class="page" id="main-page" style="opacity:0">
+
+  <!-- ── NAVBAR ── -->
+  <nav class="navbar">
+    <!-- Logo -->
+    <a href="#" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+      <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
+        <rect width="36" height="36" rx="9" fill="#3b6ef6"/>
+        <rect x="7" y="7" width="8.5" height="8.5" rx="2" fill="white" opacity=".9"/>
+        <rect x="18" y="7" width="11" height="8.5" rx="2" fill="white" opacity=".5"/>
+        <rect x="7" y="18" width="11" height="11" rx="2" fill="white" opacity=".5"/>
+        <rect x="20.5" y="18" width="8.5" height="11" rx="2" fill="white" opacity=".9"/>
+      </svg>
+      <span style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px;color:#fff">Smart<span style="color:#85a9ff">Office</span></span>
+    </a>
+    <!-- Home button -->
+    <a href="#" style="display:flex;align-items:center;gap:7px;text-decoration:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;color:#94a3b8;padding:8px 16px;border:1px solid rgba(255,255,255,.1);border-radius:10px;transition:all .2s ease;background:rgba(255,255,255,.04)"
+      onmouseover="this.style.color='#fff';this.style.borderColor='rgba(99,130,246,.4)';this.style.background='rgba(59,110,246,.12)'"
+      onmouseout="this.style.color='#94a3b8';this.style.borderColor='rgba(255,255,255,.1)';this.style.background='rgba(255,255,255,.04)'">
+      <i data-lucide="home" style="width:15px;height:15px"></i>
+      Home
+    </a>
+  </nav>
+
+  <!-- ── SPLIT ── -->
+  <div class="split">
+
+    <!-- ════════════════════════════════════
+         LEFT PANEL — Illustration
+    ════════════════════════════════════ -->
+    <div class="left-panel" id="left-panel">
+      <!-- Background layers -->
+      <div class="dot-grid"></div>
+      <div class="blob blob-a" id="blob-a"></div>
+      <div class="blob blob-b" id="blob-b"></div>
+      <div class="blob blob-c" id="blob-c"></div>
+      <canvas id="particle-canvas"></canvas>
+
+      <!-- Floating UI Cards -->
+      <div class="ui-card card-f1" id="fc1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#3b6ef6,#6366f1);display:flex;align-items:center;justify-content:center">
+            <i data-lucide="users" style="width:13px;height:13px;color:white"></i>
+          </div>
+          <span style="font-weight:600;color:#e2e8f0">Active Teams</span>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:2px">2,418</div>
+        <div style="color:#6b8cca;font-size:11px">↑ 14% this week</div>
+      </div>
+
+      <div class="ui-card card-f2" id="fc2">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0;box-shadow:0 0 6px #10b981"></div>
+          <span style="color:#94a3b8;font-size:11.5px">All systems operational</span>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:4px">
+          <div style="flex:1;height:3px;border-radius:3px;background:linear-gradient(90deg,#10b981,#34d399)"></div>
+          <div style="flex:1;height:3px;border-radius:3px;background:linear-gradient(90deg,#10b981,#34d399)"></div>
+          <div style="flex:1;height:3px;border-radius:3px;background:linear-gradient(90deg,#10b981,#34d399)"></div>
+        </div>
+      </div>
+
+      <div class="ui-card card-f3" id="fc3">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <i data-lucide="lock" style="width:13px;height:13px;color:#85a9ff"></i>
+          <span style="color:#94a3b8;font-size:11px;font-weight:600">256-bit Encrypted</span>
+        </div>
+        <div style="display:flex;gap:-4px">
+          <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#f472b6,#ec4899);border:2px solid rgba(255,255,255,.15)"></div>
+          <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#60a5fa,#3b82f6);border:2px solid rgba(255,255,255,.15);margin-left:-6px"></div>
+          <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#34d399,#10b981);border:2px solid rgba(255,255,255,.15);margin-left:-6px"></div>
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.15);margin-left:-6px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#94a3b8">+9</div>
+        </div>
+      </div>
+
+      <div class="ui-card card-f4" id="fc4">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center">
+            <i data-lucide="zap" style="width:14px;height:14px;color:white"></i>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0">98% Uptime</div>
+            <div style="font-size:10px;color:#6b8cca">Last 30 days</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center content -->
+      <div style="position:relative;z-index:2;text-align:center;max-width:380px" id="left-copy">
+        <!-- Big dashboard preview -->
+        <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:20px;backdrop-filter:blur(12px);margin-bottom:28px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+          <!-- Window chrome -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="display:flex;gap:5px">
+              <div style="width:9px;height:9px;border-radius:50%;background:#ef4444;opacity:.8"></div>
+              <div style="width:9px;height:9px;border-radius:50%;background:#f59e0b;opacity:.8"></div>
+              <div style="width:9px;height:9px;border-radius:50%;background:#10b981;opacity:.8"></div>
+            </div>
+            <div style="font-size:11px;color:#6b8cca;font-family:'Sora',sans-serif">Dashboard — Smart Office</div>
+            <div style="width:30px"></div>
+          </div>
+          <!-- Mini stats row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+            <div style="background:rgba(59,110,246,.18);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:16px;font-weight:800;color:#85a9ff;font-family:'Sora',sans-serif">142</div>
+              <div style="font-size:9px;color:#6b8cca;margin-top:1px">Tasks</div>
+            </div>
+            <div style="background:rgba(99,102,241,.18);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:16px;font-weight:800;color:#a5b4fc;font-family:'Sora',sans-serif">84</div>
+              <div style="font-size:9px;color:#6b8cca;margin-top:1px">Messages</div>
+            </div>
+            <div style="background:rgba(16,185,129,.18);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-size:16px;font-weight:800;color:#6ee7b7;font-family:'Sora',sans-serif">99%</div>
+              <div style="font-size:9px;color:#6b8cca;margin-top:1px">Uptime</div>
+            </div>
+          </div>
+          <!-- Mini chart -->
+          <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-size:10px;font-weight:600;color:#94a3b8;font-family:'Sora',sans-serif">Team Activity</span>
+              <span style="font-size:9px;color:#4b6a9e">Last 7 days</span>
+            </div>
+            <svg viewBox="0 0 260 50" style="width:100%;height:40px">
+              <defs>
+                <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#3b6ef6" stop-opacity=".3"/>
+                  <stop offset="100%" stop-color="#3b6ef6" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0 38 L37 28 L74 33 L111 16 L148 22 L185 10 L222 15 L260 8 L260 50 L0 50Z" fill="url(#cg)"/>
+              <path d="M0 38 L37 28 L74 33 L111 16 L148 22 L185 10 L222 15 L260 8" fill="none" stroke="#3b6ef6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <!-- Team row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+            <div style="display:flex;gap:-4px">
+              <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#f472b6,#ec4899);border:2px solid rgba(255,255,255,.1)"></div>
+              <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#60a5fa,#3b82f6);border:2px solid rgba(255,255,255,.1);margin-left:-5px"></div>
+              <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#34d399,#10b981);border:2px solid rgba(255,255,255,.1);margin-left:-5px"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#10b981;font-family:'Sora',sans-serif;font-weight:600">
+              <div style="width:6px;height:6px;border-radius:50%;background:#10b981;animation:blink 2s infinite"></div>
+              12 online
+            </div>
+          </div>
+        </div>
+
+        <h2 style="font-family:'Sora',sans-serif;font-weight:800;font-size:26px;color:#fff;line-height:1.2;margin-bottom:10px">
+          Your entire office,<br>
+          <span style="background:linear-gradient(135deg,#85a9ff,#a5b4fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">one smart platform.</span>
+        </h2>
+        <p style="font-size:14px;color:#6b8cca;line-height:1.6;font-family:'DM Sans',sans-serif">
+          Join 2,400+ teams managing HR, budgets, clients and communication from a single secure workspace.
+        </p>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════
+         RIGHT PANEL — Auth Forms
+    ════════════════════════════════════ -->
+    <div class="right-panel">
+      <div class="auth-card" id="auth-card">
+
+        <!-- Brand (mobile only) -->
+        <div style="display:none;align-items:center;gap:8px;margin-bottom:24px;justify-content:center" id="mobile-brand">
+          <svg width="30" height="30" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="9" fill="#3b6ef6"/><rect x="7" y="7" width="8.5" height="8.5" rx="2" fill="white" opacity=".9"/><rect x="18" y="7" width="11" height="8.5" rx="2" fill="white" opacity=".5"/><rect x="7" y="18" width="11" height="11" rx="2" fill="white" opacity=".5"/><rect x="20.5" y="18" width="8.5" height="11" rx="2" fill="white" opacity=".9"/></svg>
+          <span style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;color:#1a2340">Smart<span style="color:#3b6ef6">Office</span></span>
+        </div>
+
+        <!-- Header -->
+        <div style="margin-bottom:24px">
+          <h1 id="form-title" style="font-family:'Sora',sans-serif;font-weight:800;font-size:24px;color:#1a2340;margin-bottom:4px">Welcome back</h1>
+          <p id="form-sub" style="font-size:14px;color:#64748b;font-family:'DM Sans',sans-serif">Sign in to your Smart Office workspace</p>
+        </div>
+
+        <!-- Tab switcher -->
+        <div class="tab-wrap">
+          <button class="tab-btn active" id="tab-signin" onclick="switchForm('signin')">Sign In</button>
+          <button class="tab-btn" id="tab-signup" onclick="switchForm('signup')">Create Account</button>
+        </div>
+
+        <!-- ════ SIGN IN FORM ════ -->
+        <div class="form-panel active" id="panel-signin">
+
+          <!-- Email / Phone -->
+          <div class="field-wrap">
+            <input type="text" class="field-input" id="si-email" placeholder=" " autocomplete="email" oninput="validateEmail(this,'si-email-check')" />
+            <label class="field-label">Email or Phone Number</label>
+            <div class="field-check" id="si-email-check"></div>
+          </div>
+
+          <!-- Password -->
+          <div class="field-wrap">
+            <div class="pw-wrap">
+              <input type="password" class="field-input" id="si-pw" placeholder=" " autocomplete="current-password" style="padding-right:46px" />
+              <label class="field-label">Password</label>
+              <button class="pw-toggle" onclick="togglePw('si-pw',this)" type="button">
+                <i data-lucide="eye" style="width:17px;height:17px"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Remember + Forgot -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <label class="custom-check-wrap">
+              <input type="checkbox" id="remember-me" />
+              <div class="custom-check-box">
+                <svg class="custom-check-mark" width="10" height="8" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span style="font-size:13px;color:#64748b;font-family:'DM Sans',sans-serif">Remember me</span>
+            </label>
+            <a href="#" style="font-size:13px;color:#3b6ef6;font-family:'Sora',sans-serif;font-weight:600;text-decoration:none;transition:color .2s"
+              onmouseover="this.style.color='#1d3dd8'"
+              onmouseout="this.style.color='#3b6ef6'">Forgot password?</a>
+          </div>
+
+          <button class="btn-primary" onclick="handleSignIn()">
+            <i data-lucide="log-in" style="width:16px;height:16px"></i>
+            Sign In
+          </button>
+
+          <div class="divider"><span>or continue with</span></div>
+
+          <button class="btn-google" onclick="handleGoogle()">
+            <!-- Google SVG -->
+            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+            Continue with Google
+          </button>
+
+          <!-- Security badges -->
+          <div class="badge-row">
+            <div class="badge"><i data-lucide="shield-check" style="width:11px;height:11px"></i> SSL Secured</div>
+            <div class="badge"><i data-lucide="lock" style="width:11px;height:11px"></i> 256-bit AES</div>
+            <div class="badge"><i data-lucide="eye-off" style="width:11px;height:11px"></i> Privacy First</div>
+          </div>
+        </div>
+
+        <!-- ════ CREATE ACCOUNT FORM ════ -->
+        <div class="form-panel" id="panel-signup">
+
+          <!-- Name row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="field-wrap" style="margin-bottom:0">
+              <input type="text" class="field-input" id="fn" placeholder=" " oninput="validateName(this,'fn-check')" />
+              <label class="field-label">First Name</label>
+              <div class="field-check" id="fn-check"></div>
+            </div>
+            <div class="field-wrap" style="margin-bottom:0">
+              <input type="text" class="field-input" id="ln" placeholder=" " oninput="validateName(this,'ln-check')" />
+              <label class="field-label">Last Name</label>
+              <div class="field-check" id="ln-check"></div>
+            </div>
+          </div>
+          <div style="margin-bottom:18px"></div>
+
+<div class="field-wrap">
+  <input 
+    type="tel" 
+    class="field-input" 
+    id="phone" 
+    placeholder=" " 
+    oninput="validatePhone(this,'phone-check')" 
+  />
+
+  <label class="field-label">
+    Phone Number
+  </label>
+
+  <div class="field-check" id="ln-check"></div>
+  <div class="field-check" id="phone-check"></div>
+
+  <div class="note-text" style="display:flex;align-items:center;gap:6px;margin-top:8px;padding-left:4px;">
+    <i 
+      data-lucide="message-circle" 
+      style="width:13px;height:13px;color:#25D366;flex-shrink:0;">
+    </i>
+
+    <span>
+      Phone number must be connected to WhatsApp.
+    </span>
+  </div>
+</div>
+
+          <!-- Email -->
+          <div class="field-wrap">
+            <input type="email" class="field-input" id="su-email" placeholder=" " oninput="validateEmail(this,'su-email-check')" />
+            <label class="field-label">Email Address</label>
+            <div class="field-check" id="su-email-check"></div>
+          </div>
+
+          <!-- Gender -->
+          <div style="margin-bottom:14px">
+            <div style="font-size:12px;font-weight:600;color:#94a3b8;font-family:'Sora',sans-serif;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Gender</div>
+            <div class="chip-group">
+              <label class="chip" id="chip-male" onclick="selectChip('gender','chip-male')">
+                <input type="radio" class="chip-radio" name="gender" value="male" />
+                <i data-lucide="user" style="width:14px;height:14px"></i> Male
+              </label>
+              <label class="chip" id="chip-female" onclick="selectChip('gender','chip-female')">
+                <input type="radio" class="chip-radio" name="gender" value="female" />
+                <i data-lucide="user" style="width:14px;height:14px"></i> Female
+              </label>
+            </div>
+          </div>
+
+          <!-- Account Type -->
+          <div style="margin-bottom:18px">
+            <div style="font-size:12px;font-weight:600;color:#94a3b8;font-family:'Sora',sans-serif;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Account Type</div>
+            <div class="chip-group">
+              <label class="chip" id="chip-company" onclick="selectChip('actype','chip-company')">
+                <input type="radio" class="chip-radio" name="actype" value="company" />
+                <i data-lucide="building-2" style="width:14px;height:14px"></i> Company
+              </label>
+              <label class="chip" id="chip-personal" onclick="selectChip('actype','chip-personal')">
+                <input type="radio" class="chip-radio" name="actype" value="personal" />
+                <i data-lucide="user-circle" style="width:14px;height:14px"></i> Personal
+              </label>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="field-wrap" style="margin-bottom:6px">
+            <div class="pw-wrap">
+              <input type="password" class="field-input" id="su-pw" placeholder=" " style="padding-right:46px" oninput="checkStrength(this.value)" autocomplete="new-password" />
+              <label class="field-label">Password</label>
+              <button class="pw-toggle" onclick="togglePw('su-pw',this)" type="button">
+                <i data-lucide="eye" style="width:17px;height:17px"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Strength bar -->
+          <div class="pw-strength-bar" id="pw-bar">
+            <div class="pw-seg" id="seg1"></div>
+            <div class="pw-seg" id="seg2"></div>
+            <div class="pw-seg" id="seg3"></div>
+            <div class="pw-seg" id="seg4"></div>
+          </div>
+          <div class="pw-label" id="pw-label">Enter a password</div>
+
+          <!-- Rules -->
+          <div class="pw-rules" id="pw-rules" style="margin-bottom:18px">
+            <div class="pw-rule" id="rule-len"><div class="dot"></div> At least 8 characters</div>
+            <div class="pw-rule" id="rule-num"><div class="dot"></div> Contains a number</div>
+            <div class="pw-rule" id="rule-special"><div class="dot"></div> Contains a special character (!@#$…)</div>
+            <div class="pw-rule" id="rule-upper"><div class="dot"></div> Contains uppercase letter</div>
+          </div>
+
+          <!-- Create Account btn -->
+          <button class="btn-primary" onclick="handleSignUp()" style="margin-bottom:12px">
+            <i data-lucide="user-plus" style="width:16px;height:16px"></i>
+            Create Account
+          </button>
+
+          <div class="divider"><span>or sign up with</span></div>
+
+          <button class="btn-google" onclick="handleGoogle()">
+            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+            Continue with Google
+          </button>
+
+          <div style="margin-top:14px;text-align:center;font-size:12px;color:#94a3b8;font-family:'DM Sans',sans-serif;line-height:1.6">
+            By creating an account you agree to our
+            <a href="#" style="color:#3b6ef6;text-decoration:none;font-weight:500">Terms of Service</a> &
+            <a href="#" style="color:#3b6ef6;text-decoration:none;font-weight:500">Privacy Policy</a>
+          </div>
+        </div>
+        <!-- end signup panel -->
+
+      </div>
+      <!-- end auth-card -->
+    </div>
+    <!-- end right-panel -->
+
+  </div>
+  <!-- end split -->
+
+</div>
+<!-- end page -->
+
+<!-- ═══════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════ -->
+<script>
+/* ────────────────────────────────────────
+   Lucide icons + Loader
+──────────────────────────────────────── */
+lucide.createIcons();
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loader').classList.add('out');
+    initPage();
+  }, 900);
+});
+
+/* ────────────────────────────────────────
+   GSAP page entrance
+──────────────────────────────────────── */
+function initPage() {
+  const page = document.getElementById('main-page');
+  page.style.opacity = '1';
+
+  // Blobs
+  gsap.to(['#blob-a','#blob-b','#blob-c'], {
+    opacity: .22, duration: 1.4, stagger: .2, ease: 'power2.out'
+  });
+
+  // Left copy
+  gsap.from('#left-copy', { x: -40, opacity: 0, duration: 1, ease: 'power3.out', delay: .3 });
+
+  // Floating cards
+  const cards = ['#fc1','#fc2','#fc3','#fc4'];
+  gsap.to(cards, { opacity: 1, duration: .6, stagger: .12, ease: 'power2.out', delay: .6 });
+
+  // Auth card
+  gsap.to('#auth-card', {
+    opacity: 1, y: 0, duration: .9, ease: 'power3.out', delay: .2
+  });
+  gsap.from('#auth-card', { y: 32, duration: .9, ease: 'power3.out', delay: .2 });
+}
+
+/* ────────────────────────────────────────
+   Particle canvas
+──────────────────────────────────────── */
+(function() {
+  const canvas  = document.getElementById('particle-canvas');
+  const ctx     = canvas.getContext('2d');
+  const particles = [];
+
+  function resize() {
+    canvas.width  = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  setTimeout(resize, 100);
+
+  for (let i = 0; i < 55; i++) {
+    particles.push({
+      x: Math.random(), y: Math.random(),
+      r: Math.random() * 1.6 + .4,
+      dx: (Math.random() - .5) * .00025,
+      dy: (Math.random() - .5) * .00025,
+      alpha: Math.random() * .5 + .15,
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of particles) {
+      p.x = (p.x + p.dx + 1) % 1;
+      p.y = (p.y + p.dy + 1) % 1;
+      ctx.beginPath();
+      ctx.arc(p.x * canvas.width, p.y * canvas.height, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(133, 169, 255, ${p.alpha})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ────────────────────────────────────────
+   Form switching (GSAP animated)
+──────────────────────────────────────── */
+let currentForm = 'signin';
+
+function switchForm(to) {
+  if (to === currentForm) return;
+  currentForm = to;
+
+  const panelOut = to === 'signin' ? '#panel-signup' : '#panel-signin';
+  const panelIn  = to === 'signin' ? '#panel-signin'  : '#panel-signup';
+  const dir      = to === 'signin' ? -1 : 1;
+
+  document.getElementById('tab-signin').classList.toggle('active', to === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', to === 'signup');
+
+  // Update header
+  if (to === 'signin') {
+    document.getElementById('form-title').textContent = 'Welcome back';
+    document.getElementById('form-sub').textContent   = 'Sign in to your Smart Office workspace';
+  } else {
+    document.getElementById('form-title').textContent = 'Create your account';
+    document.getElementById('form-sub').textContent   = 'Join Smart Office — free for 14 days';
+  }
+
+  // Animate out
+  gsap.to(panelOut, {
+    x: -40 * dir, opacity: 0, duration: .28, ease: 'power2.in',
+    onComplete: () => {
+      document.querySelector(panelOut).classList.remove('active');
+      document.querySelector(panelOut).style.cssText = '';
+      document.querySelector(panelIn).classList.add('active');
+      gsap.fromTo(panelIn,
+        { x: 40 * dir, opacity: 0 },
+        { x: 0, opacity: 1, duration: .38, ease: 'power2.out' }
+      );
+      lucide.createIcons();
+    }
+  });
+}
+
+/* ────────────────────────────────────────
+   Chip selector
+──────────────────────────────────────── */
+const chipGroups = {};
+function selectChip(group, chipId) {
+  if (!chipGroups[group]) chipGroups[group] = [];
+  // deselect all in group
+  chipGroups[group].forEach(id => document.getElementById(id)?.classList.remove('selected'));
+  chipGroups[group] = [chipId];
+  document.getElementById(chipId).classList.add('selected');
+}
+// Register chips
+['chip-male','chip-female'].forEach(id => {
+  if (!chipGroups['gender']) chipGroups['gender'] = [];
+  chipGroups['gender'].push(id);
+});
+['chip-company','chip-personal'].forEach(id => {
+  if (!chipGroups['actype']) chipGroups['actype'] = [];
+  chipGroups['actype'].push(id);
+});
+
+/* ────────────────────────────────────────
+   Password toggle
+──────────────────────────────────────── */
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = `<i data-lucide="${show ? 'eye-off' : 'eye'}" style="width:17px;height:17px"></i>`;
+  lucide.createIcons();
+}
+
+/* ────────────────────────────────────────
+   Validation helpers
+──────────────────────────────────────── */
+function setCheck(id, state) { // state: 'valid' | 'invalid' | ''
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'field-check' + (state ? ' ' + state : '');
+  if (state === 'valid')   el.innerHTML = '<i data-lucide="check" style="width:10px;height:10px"></i>';
+  else if (state === 'invalid') el.innerHTML = '<i data-lucide="x" style="width:10px;height:10px"></i>';
+  else el.innerHTML = '';
+  lucide.createIcons();
+}
+
+function setInputState(inp, state) {
+  inp.classList.remove('valid','invalid');
+  if (state) inp.classList.add(state);
+}
+
+function validateEmail(inp, checkId) {
+  const val = inp.value.trim();
+  if (!val) { setCheck(checkId,''); setInputState(inp,''); return; }
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || /^[\d\s+\-()]{7,}$/.test(val);
+  setCheck(checkId, ok ? 'valid' : 'invalid');
+  setInputState(inp, ok ? 'valid' : 'invalid');
+}
+
+function validateName(inp, checkId) {
+  const val = inp.value.trim();
+  if (!val) { setCheck(checkId,''); setInputState(inp,''); return; }
+  const ok = val.length >= 2;
+  setCheck(checkId, ok ? 'valid' : 'invalid');
+  setInputState(inp, ok ? 'valid' : 'invalid');
+}
+
+function validatePhone(inp, checkId) {
+  const val = inp.value.replace(/\D/g,'');
+  if (!val) { setCheck(checkId,''); setInputState(inp,''); return; }
+  const ok = val.length >= 7;
+  setCheck(checkId, ok ? 'valid' : 'invalid');
+  setInputState(inp, ok ? 'valid' : 'invalid');
+}
+
+/* ────────────────────────────────────────
+   Password strength
+──────────────────────────────────────── */
+const colors = { 0:'#e2e8f0', 1:'#ef4444', 2:'#f59e0b', 3:'#3b6ef6', 4:'#10b981' };
+const labels = { 0:'Enter a password', 1:'Too weak', 2:'Getting there…', 3:'Strong', 4:'Very strong 💪' };
+
+function checkStrength(pw) {
+  let score = 0;
+  const rules = {
+    len:     pw.length >= 8,
+    num:     /\d/.test(pw),
+    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw),
+    upper:   /[A-Z]/.test(pw),
+  };
+  score = Object.values(rules).filter(Boolean).length;
+
+  // Update rule indicators
+  Object.entries(rules).forEach(([key, ok]) => {
+    const el = document.getElementById('rule-' + key);
+    if (el) el.classList.toggle('ok', ok);
+  });
+
+  // Update strength bar
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('seg' + i).style.background = i <= score ? colors[score] : '#e2e8f0';
+  }
+
+  const lbl = document.getElementById('pw-label');
+  lbl.textContent = labels[score];
+  lbl.style.color = score === 0 ? '#94a3b8' : colors[score];
+}
+
+/* ────────────────────────────────────────
+   Submit handlers
+──────────────────────────────────────── */
+function handleSignIn() {
+  const btn = event.currentTarget;
+  animateBtn(btn, 'Signing in…', () => {
+    showSuccess('Welcome Back! 👋', 'You have signed in to Smart Office successfully.');
+  });
+}
+
+function handleSignUp() {
+  const btn = event.currentTarget;
+  animateBtn(btn, 'Creating account…', () => {
+    showSuccess('Account Created! 🎉', 'Welcome to Smart Office. Your workspace is ready to go.');
+  });
+}
+
+function handleGoogle() {
+  const btn = event.currentTarget;
+  animateBtn(btn, 'Connecting…', () => {
+    showSuccess('Connected with Google! ✓', 'Your Smart Office account is linked to Google.');
+  });
+}
+
+function animateBtn(btn, text, cb) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<svg class="loader-ring" style="width:18px;height:18px;border-width:2px;margin-right:6px"></svg>${text}`;
+  btn.style.opacity = '.8';
+  setTimeout(() => {
+    btn.innerHTML = orig;
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    lucide.createIcons();
+    if (cb) cb();
+  }, 1400);
+}
+
+/* ────────────────────────────────────────
+   Success overlay
+──────────────────────────────────────── */
+function showSuccess(title, msg) {
+  document.getElementById('success-title').textContent = title;
+  document.getElementById('success-msg').textContent = msg;
+  document.getElementById('success-overlay').classList.add('show');
+}
+function closeSuccess() {
+  document.getElementById('success-overlay').classList.remove('show');
+}
+
+/* ────────────────────────────────────────
+   Mobile brand visibility
+──────────────────────────────────────── */
+f
+  // mobile brand visibility
+  function checkMobile() { document.getElementById('mobile-brand').style.display = window.innerWidth <= 900 ? 'flex' : 'none'; }
+  window.addEventListener('resize', checkMobile); checkMobile();
+window.addEventListener('resize', checkMobile);
+checkMobile();
+
+/* ────────────────────────────────────────
+   Blink keyframe (for the green dot)
+──────────────────────────────────────── */
+const blinkStyle = document.createElement('style');
+blinkStyle.textContent = `@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }`;
+document.head.appendChild(blinkStyle);
+</script>
+
+</body>
+</html>

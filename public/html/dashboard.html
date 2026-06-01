@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
+<title>Smart Office — Dashboard</title>
+<script src="https://cdn.tailwindcss.com">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js">
+</script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js">
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --sidebar-w: 280px;
+    --sidebar-w-collapsed: 72px;
+    --bg: #f8faff;
+    --bg2: #ffffff;
+    --bg3: #f0f4ff;
+    --blue: #3b6ef6;
+    --blue-2: #2550eb;
+    --blue-glow: rgba(59,110,246,0.2);
+    --accent: #10b981;
+    --accent-2: #6366f1;
+    --text-1: #0f172a;
+    --text-2: #475569;
+    --text-3: #94a3b8;
+    --border: rgba(59,110,246,0.12);
+    --glass: rgba(255,255,255,0.7);
+    --glass-2: rgba(59,110,246,0.06);
+    --shadow: 0 8px 32px rgba(59,110,246,0.08);
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-1);
+    overflow-x: hidden;
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  /* Scroll Progress */
+  #scroll-progress {
+    position: fixed; top: 0; left: 0; height: 2px; z-index: 9999;
+    background: linear-gradient(90deg, var(--blue), var(--accent));
+    width: 0%; transition: width 0.1s linear;
+  }
+
+  /* Loading Screen */
+  #loader {
+    position: fixed; inset: 0; z-index: 99999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+  }
+  #loader .logo-spin {
+    width: 56px; height: 56px;
+    border: 2px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loader p { color: var(--text-2); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* Layout */
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: var(--sidebar-w);
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    z-index: 100;
+    display: flex; flex-direction: column;
+    transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+    overflow: hidden;
+  }
+  #sidebar.collapsed { width: var(--sidebar-w-collapsed); }
+
+  #main-area {
+    margin-left: var(--sidebar-w);
+    transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1);
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    width: calc(100% - var(--sidebar-w));
+    max-width: 100%;
+  }
+  #sidebar.collapsed ~ #main-area { 
+    margin-left: var(--sidebar-w-collapsed); 
+    width: calc(100% - var(--sidebar-w-collapsed));
+  }
+
+  /* Sidebar brand */
+  .sidebar-brand {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 18px 18px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .brand-logo {
+    width: 38px; height: 38px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--blue), var(--accent));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand-text { overflow: hidden; white-space: nowrap; }
+  .brand-text .name {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--text-1);
+    letter-spacing: -0.3px;
+  }
+  .brand-text .tagline { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .collapse-btn {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--glass); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-2);
+    transition: all 0.2s;
+  }
+  .collapse-btn:hover { background: var(--glass-2); color: var(--text-1); }
+  #sidebar.collapsed .brand-text,
+  #sidebar.collapsed .collapse-btn { opacity: 0; pointer-events: none; }
+  #sidebar.collapsed .sidebar-brand { padding: 20px 17px 18px; justify-content: center; }
+
+  /* Nav */
+  .sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 0; }
+  .sidebar-nav::-webkit-scrollbar { width: 0; }
+
+  .nav-label {
+    font-size: 10px; font-weight: 600; color: var(--text-3);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 12px 20px 6px;
+    white-space: nowrap; overflow: hidden;
+    transition: opacity 0.2s;
+  }
+  #sidebar.collapsed .nav-label { opacity: 0; }
+
+  .nav-item { position: relative; }
+  .nav-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 18px;
+    cursor: pointer;
+    border-radius: 10px;
+    margin: 1px 8px;
+    color: var(--text-2);
+    font-size: 13.5px; font-weight: 500;
+    transition: all 0.18s;
+    white-space: nowrap;
+    position: relative;
+    user-select: none;
+  }
+  .nav-link:hover { background: var(--glass-2); color: var(--text-1); }
+  .nav-link.active {
+    background: linear-gradient(135deg, rgba(59,110,246,0.12), rgba(16,185,129,0.06));
+    color: var(--blue-2);
+    border: 1px solid rgba(59,110,246,0.2);
+  }
+  .nav-link .icon-wrap {
+    width: 20px; height: 20px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-link .label { flex: 1; }
+  .nav-link .arrow {
+    transition: transform 0.25s;
+    flex-shrink: 0;
+  }
+  .nav-link.open .arrow { transform: rotate(180deg); }
+
+  /* Dropdown */
+  .nav-dropdown {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .nav-dropdown.open { max-height: 300px; }
+  .nav-dropdown a {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 18px 7px 48px;
+    font-size: 13px; color: var(--text-3);
+    border-radius: 8px; margin: 1px 8px;
+    cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .nav-dropdown a:before {
+    content: ''; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--text-3); flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .nav-dropdown a:hover { color: var(--text-1); background: var(--glass-2); }
+  .nav-dropdown a:hover:before { background: var(--blue); }
+
+  #sidebar.collapsed .nav-dropdown { display: none; }
+  #sidebar.collapsed .nav-link .label,
+  #sidebar.collapsed .nav-link .arrow { display: none; }
+  #sidebar.collapsed .nav-link { justify-content: center; padding: 10px; }
+
+  /* Floating submenu */
+  .floating-sub {
+    position: fixed;
+    left: calc(var(--sidebar-w-collapsed) + 8px);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(20px);
+    padding: 8px;
+    min-width: 180px;
+    z-index: 200;
+    opacity: 0;
+    transform: translateX(-8px);
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+  }
+  .floating-sub.visible { opacity: 1; transform: translateX(0); pointer-events: all; }
+  .floating-sub .fsub-title {
+    font-size: 11px; font-weight: 600; color: var(--text-3);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 4px 10px 8px;
+  }
+  .floating-sub a {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; font-size: 13px; color: var(--text-2);
+    border-radius: 8px; cursor: pointer; transition: all 0.15s;
+    text-decoration: none;
+  }
+  .floating-sub a:hover { color: var(--text-1); background: var(--glass-2); }
+
+  /* Sidebar bottom */
+  .sidebar-bottom {
+    padding: 12px 8px;
+    border-top: 1px solid var(--border);
+  }
+  .sidebar-bottom .nav-link { margin: 2px 0; }
+
+  /* Overlay */
+  #overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 99;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+  }
+
+  /* Navbar */
+  #navbar {
+    position: sticky; top: 0; z-index: 50;
+    height: 60px;
+    background: rgba(248,250,255,0.9);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 24px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .nav-left { display: flex; flex-direction: column; }
+  .nav-left .page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 700; color: var(--text-1);
+  }
+  .nav-left .breadcrumb {
+    font-size: 11px; color: var(--text-3);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .search-bar {
+    flex: 1; max-width: 400px; margin: 0 auto;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 14px;
+    transition: all 0.2s;
+  }
+  .search-bar:focus-within {
+    border-color: rgba(59,110,246,0.4);
+    background: var(--bg2);
+    box-shadow: 0 0 0 3px rgba(59,110,246,0.08);
+  }
+  .search-bar input {
+    background: none; border: none; outline: none;
+    color: var(--text-1); font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px; width: 100%; padding: 10px 0;
+  }
+  .search-bar input::placeholder { color: var(--text-3); }
+  .search-bar .search-icon { color: var(--text-3); flex-shrink: 0; }
+
+  .nav-right { display: flex; align-items: center; gap: 8px; }
+  .nav-icon-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--glass); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-2);
+    transition: all 0.18s; position: relative;
+  }
+  .nav-icon-btn:hover { background: var(--glass-2); color: var(--text-1); }
+  .notif-badge {
+    position: absolute; top: -4px; right: -4px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #ef4444;
+    font-size: 9px; font-weight: 700; color: white;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--bg);
+    animation: pulse-badge 2s infinite;
+  }
+  @keyframes pulse-badge {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+
+  .avatar-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 13px; font-weight: 700; color: white;
+    position: relative; border: 2px solid rgba(59,110,246,0.15);
+    transition: transform 0.2s;
+  }
+  .avatar-btn:hover { transform: scale(1.05); }
+
+  /* Profile Dropdown */
+  .profile-dropdown {
+    position: absolute; top: calc(100% + 10px); right: 0;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    width: 220px; z-index: 300;
+    opacity: 0; transform: translateY(-8px) scale(0.97);
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+  }
+  .profile-dropdown.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+  .pd-header {
+    padding: 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .pd-avatar {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+  }
+  .pd-info .name { font-size: 13.5px; font-weight: 600; }
+  .pd-info .role { font-size: 11.5px; color: var(--text-3); }
+  .pd-links { padding: 8px; }
+  .pd-links a {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 9px;
+    font-size: 13px; color: var(--text-2);
+    cursor: pointer; transition: all 0.15s;
+    text-decoration: none;
+  }
+  .pd-links a:hover { color: var(--text-1); background: var(--glass-2); }
+  .pd-links .logout { color: #ef4444; }
+  .pd-links .logout:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
+  .pd-divider { height: 1px; background: var(--border); margin: 4px 8px; }
+
+  /* Main content */
+  #content {
+    flex: 1;
+    padding: 28px 28px 48px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    overflow-x: hidden;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, var(--bg3) 0%, rgba(59,110,246,0.04) 50%, rgba(16,185,129,0.03) 100%);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 36px;
+    position: relative; overflow: hidden;
+    margin-bottom: 28px;
+    width: 100%;
+  }
+  .hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 800;
+    background: linear-gradient(135deg, #0f172a, var(--blue-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px; position: relative; z-index: 1;
+  }
+  .hero p { color: var(--text-2); font-size: 14px; position: relative; z-index: 1; }
+  .hero-date {
+    position: absolute; top: 32px; right: 36px;
+    font-size: 12.5px; color: var(--text-3);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hero-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; margin-top: 28px; position: relative; z-index: 1;
+    width: 100%;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    transition: all 0.25s;
+    cursor: default;
+    position: relative; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(59,110,246,0.04);
+  }
+  .stat-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(59,110,246,0.25);
+    box-shadow: 0 12px 40px rgba(59,110,246,0.1);
+  }
+  .stat-card .label { font-size: 11.5px; color: var(--text-3); margin-bottom: 8px; font-weight: 500; }
+  .stat-card .value {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px; font-weight: 700; color: var(--text-1);
+    line-height: 1;
+  }
+  .stat-card .change {
+    font-size: 11px; margin-top: 6px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .stat-card .change.up { color: var(--accent); }
+  .stat-card .change.down { color: #ef4444; }
+  .stat-card .sc-icon {
+    position: absolute; right: 16px; top: 16px;
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0.9;
+  }
+
+  /* Section headers */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--text-1);
+  }
+  .section-link {
+    font-size: 12.5px; color: var(--blue-2);
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .section-link:hover { opacity: 0.7; }
+
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; }
+
+  /* Card base */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: 0 2px 8px rgba(59,110,246,0.04);
+  }
+
+  /* Quick actions */
+  .qa-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; cursor: pointer;
+    transition: all 0.25s;
+    text-align: center; min-height: 110px;
+    box-shadow: 0 2px 8px rgba(59,110,246,0.04);
+  }
+  .qa-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(59,110,246,0.25);
+    box-shadow: 0 16px 40px rgba(59,110,246,0.1);
+  }
+  .qa-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qa-label { font-size: 13px; font-weight: 600; color: var(--text-1); }
+
+  /* Activity timeline */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .tl-item {
+    display: flex; gap: 14px; padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .tl-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .tl-dot {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .tl-body { flex: 1; min-width: 0; }
+  .tl-body .tl-title { font-size: 13.5px; font-weight: 600; color: var(--text-1); }
+  .tl-body .tl-desc { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+  .tl-time { font-size: 11.5px; color: var(--text-3); white-space: nowrap; flex-shrink: 0; }
+
+  /* Meeting cards */
+  .meeting-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 10px; cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .meeting-card:last-child { margin-bottom: 0; }
+  .meeting-card:hover { background: var(--glass-2); border-color: rgba(59,110,246,0.25); }
+  .meeting-time-block {
+    text-align: center; flex-shrink: 0; min-width: 52px;
+  }
+  .meeting-time-block .time { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--blue-2); }
+  .meeting-time-block .ampm { font-size: 10px; color: var(--text-3); }
+  .meeting-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
+  .meeting-info { flex: 1; min-width: 0; }
+  .meeting-info .mtitle { font-size: 13.5px; font-weight: 600; color: var(--text-1); }
+  .meeting-info .msub { font-size: 12px; color: var(--text-3); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+  .meeting-avatars { display: flex; flex-shrink: 0; }
+  .m-av {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--bg2);
+    background: linear-gradient(135deg, var(--blue), var(--accent-2));
+    margin-left: -6px; font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+  }
+  .m-av:first-child { margin-left: 0; }
+  .meeting-status {
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .ms-soon { background: rgba(59,110,246,0.1); color: var(--blue-2); }
+  .ms-today { background: rgba(16,185,129,0.1); color: var(--accent); }
+  .ms-pending { background: rgba(239,68,68,0.08); color: #ef4444; }
+
+  /* Budget */
+  .budget-bar {
+    height: 8px; border-radius: 4px;
+    background: var(--bg3); overflow: hidden;
+    margin-top: 6px;
+  }
+  .budget-fill {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--blue), var(--accent));
+    transition: width 1.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .budget-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+    width: 100%;
+  }
+  .budget-row:last-child { margin-bottom: 0; }
+  .b-label { font-size: 12.5px; color: var(--text-2); }
+  .b-amount { font-size: 13px; font-weight: 600; color: var(--text-1); }
+
+  /* Mini chart */
+  .mini-chart { display: flex; align-items: flex-end; gap: 6px; height: 60px; margin: 16px 0 8px; width: 100%; }
+  .chart-bar {
+    flex: 1; border-radius: 4px 4px 0 0;
+    background: linear-gradient(to top, var(--blue), rgba(59,110,246,0.3));
+    min-width: 8px; transition: all 0.3s; cursor: pointer;
+    position: relative;
+  }
+  .chart-bar:hover { background: linear-gradient(to top, var(--accent), rgba(16,185,129,0.3)); }
+  .chart-labels { display: flex; gap: 6px; width: 100%; }
+  .chart-labels span { flex: 1; text-align: center; font-size: 10px; color: var(--text-3); }
+
+  /* Chat preview */
+  .chat-msg {
+    display: flex; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-msg:last-child { border-bottom: none; padding-bottom: 0; }
+  .chat-av {
+    width: 32px; height: 32px; border-radius: 9px;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: white;
+  }
+  .chat-body { flex: 1; min-width: 0; }
+  .chat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+  .chat-name { font-size: 13px; font-weight: 600; color: var(--text-1); }
+  .chat-time { font-size: 11px; color: var(--text-3); flex-shrink: 0; }
+  .chat-text { font-size: 12.5px; color: var(--text-3); line-height: 1.5; }
+  .chat-unread {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--blue); font-size: 10px; font-weight: 700;
+    color: white; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Floating blobs */
+  .blob {
+    position: fixed; border-radius: 50%;
+    filter: blur(100px); pointer-events: none; z-index: 0;
+    opacity: 0.06;
+  }
+
+  /* Mobile hamburger */
+  #mob-toggle {
+    display: none; cursor: pointer;
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--glass); border: 1px solid var(--border);
+    align-items: center; justify-content: center; color: var(--text-2);
+    margin-right: 8px;
+  }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .hero-date { display: none; }
+    .search-bar { display: none; }
+  }
+  @media (max-width: 768px) {
+    #sidebar {
+      transform: translateX(-100%);
+      width: var(--sidebar-w) !important;
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    #sidebar.mobile-open { transform: translateX(0); }
+    #main-area { margin-left: 0 !important; width: 100% !important; }
+    #mob-toggle { display: flex; }
+    .collapse-btn { display: none; }
+    #overlay { display: block; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    #content { padding: 16px 16px 48px; width: 100%; }
+    .hero { padding: 24px 20px; }
+    .hero h1 { font-size: clamp(18px, 5vw, 24px); }
+    .stat-card { padding: 14px 16px; }
+    .stat-card .value { font-size: 22px; }
+    .meeting-card { flex-wrap: wrap; gap: 10px; }
+    .meeting-status { margin-left: auto; }
+    .nav-right { gap: 4px; }
+  }
+
+  @media (max-width: 480px) {
+    .hero-stats { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .qa-card { min-height: 90px; padding: 14px; }
+    .qa-icon { width: 36px; height: 36px; }
+    .qa-label { font-size: 12px; }
+    .card { padding: 16px; }
+    .tl-dot { width: 28px; height: 28px; }
+    .tl-body .tl-title { font-size: 12.5px; }
+    .tl-body .tl-desc { font-size: 11.5px; }
+  }
+
+  /* Animations */
+  .fade-up { opacity: 0; transform: translateY(20px); }
+
+  /* Tooltip */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+    margin-left: 12px;
+    background: var(--bg2); border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 7px;
+    font-size: 12px; color: var(--text-1);
+    white-space: nowrap; z-index: 500;
+    pointer-events: none;
+    box-shadow: var(--shadow);
+  }
+</style>
+</head>
+<body>
+
+<!-- Scroll Progress -->
+<div id="scroll-progress"></div>
+
+<!-- Loader -->
+<div id="loader">
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <rect width="48" height="48" rx="12" fill="url(#lg)"/>
+    <defs><linearGradient id="lg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b6ef6"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient></defs>
+    <path d="M14 24h4l4-8 4 16 4-10 2 4 4 0" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="logo-spin" style="position:absolute;"></div>
+  <p>Loading Smart Office</p>
+</div>
+
+<!-- Background Blobs -->
+<div class="blob" style="width:600px;height:600px;background:var(--blue);top:-200px;right:-100px;"></div>
+<div class="blob" style="width:500px;height:500px;background:var(--accent);bottom:-200px;left:200px;"></div>
+
+<!-- Mobile Overlay -->
+<div id="overlay" onclick="closeMobile()"></div>
+
+<!-- ===== SIDEBAR ===== -->
+<aside id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M3 11h4l3-6 4 12 3-7 2 3 3 0" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="name">Smart Office</div>
+      <div class="tagline">Workspace Platform</div>
+    </div>
+    <div class="collapse-btn" onclick="toggleSidebar()" title="Toggle sidebar">
+      <i data-lucide="panel-left-close" style="width:15px;height:15px;"></i>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+
+    <div class="nav-item">
+      <div class="nav-link active" onclick="setActive(this)">
+        <span class="icon-wrap"><i data-lucide="layout-dashboard" style="width:17px;height:17px;"></i></span>
+        <span class="label">Dashboard</span>
+      </div>
+    </div>
+
+    <div class="nav-label">Workspace</div>
+
+    <div class="nav-item" id="nav-comm">
+      <div class="nav-link" onclick="toggleDropdown('dd-comm','nav-comm',this)" data-tip="Communication">
+        <span class="icon-wrap"><i data-lucide="message-square" style="width:17px;height:17px;"></i></span>
+        <span class="label">Communication</span>
+        <i data-lucide="chevron-down" class="arrow" style="width:14px;height:14px;"></i>
+      </div>
+      <div class="nav-dropdown" id="dd-comm">
+        <a>Group Chat</a>
+        <a>Client Chat</a>
+        <a>Notifications</a>
+      </div>
+    </div>
+
+    <div class="nav-item" id="nav-hr">
+      <div class="nav-link" onclick="toggleDropdown('dd-hr','nav-hr',this)" data-tip="HR Management">
+        <span class="icon-wrap"><i data-lucide="users" style="width:17px;height:17px;"></i></span>
+        <span class="label">HR Management</span>
+        <i data-lucide="chevron-down" class="arrow" style="width:14px;height:14px;"></i>
+      </div>
+      <div class="nav-dropdown" id="dd-hr">
+        <a>Employees</a>
+        <a>Recruitment</a>
+        <a>Attendance</a>
+      </div>
+    </div>
+
+    <div class="nav-item" id="nav-meet">
+      <div class="nav-link" onclick="toggleDropdown('dd-meet','nav-meet',this)" data-tip="Meetings">
+        <span class="icon-wrap"><i data-lucide="video" style="width:17px;height:17px;"></i></span>
+        <span class="label">Meetings</span>
+        <i data-lucide="chevron-down" class="arrow" style="width:14px;height:14px;"></i>
+      </div>
+      <div class="nav-dropdown" id="dd-meet">
+        <a>Meeting Rooms</a>
+        <a>Upcoming Meetings</a>
+        <a>Meeting History</a>
+        <a>Start Meeting</a>
+      </div>
+    </div>
+
+    <div class="nav-item" id="nav-clients">
+      <div class="nav-link" onclick="toggleDropdown('dd-clients','nav-clients',this)" data-tip="Clients">
+        <span class="icon-wrap"><i data-lucide="briefcase" style="width:17px;height:17px;"></i></span>
+        <span class="label">Clients</span>
+        <i data-lucide="chevron-down" class="arrow" style="width:14px;height:14px;"></i>
+      </div>
+      <div class="nav-dropdown" id="dd-clients">
+        <a>Active Clients</a>
+        <a>Leads</a>
+        <a>Client Tracking</a>
+      </div>
+    </div>
+
+    <div class="nav-label">Administration</div>
+
+    <div class="nav-item" id="nav-admin">
+      <div class="nav-link" onclick="toggleDropdown('dd-admin','nav-admin',this)" data-tip="Admin Panel">
+        <span class="icon-wrap"><i data-lucide="shield" style="width:17px;height:17px;"></i></span>
+        <span class="label">Admin Panel</span>
+        <i data-lucide="chevron-down" class="arrow" style="width:14px;height:14px;"></i>
+      </div>
+      <div class="nav-dropdown" id="dd-admin">
+        <a>Users</a>
+        <a>Budget Management</a>
+        <a>Meeting Schedules</a>
+        <a>Custom Settings</a>
+        <a>Send Notifications</a>
+        <a>Start Meeting</a>
+        <a>Client Tracking</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <div class="nav-link" onclick="setActive(this)">
+        <span class="icon-wrap"><i data-lucide="bar-chart-3" style="width:17px;height:17px;"></i></span>
+        <span class="label">Analytics</span>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <div class="nav-link" onclick="setActive(this)">
+        <span class="icon-wrap"><i data-lucide="settings-2" style="width:17px;height:17px;"></i></span>
+        <span class="label">Settings</span>
+      </div>
+    </div>
+
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="nav-link" style="margin:2px 0;">
+      <span class="icon-wrap"><i data-lucide="life-buoy" style="width:17px;height:17px;"></i></span>
+      <span class="label">Help Center</span>
+    </div>
+    <div class="nav-link" style="margin:2px 0;color:#ef4444;" onmouseenter="this.style.background='rgba(239,68,68,0.06)'" onmouseleave="this.style.background=''">
+      <span class="icon-wrap"><i data-lucide="log-out" style="width:17px;height:17px;"></i></span>
+      <span class="label">Sign Out</span>
+    </div>
+  </div>
+</aside>
+
+<!-- Floating Submenu -->
+<div class="floating-sub" id="floating-sub">
+  <div class="fsub-title" id="fsub-title">Menu</div>
+  <div id="fsub-links"></div>
+</div>
+
+<!-- ===== MAIN AREA ===== -->
+<div id="main-area">
+
+  <header id="navbar">
+    <div id="mob-toggle" onclick="openMobile()">
+      <i data-lucide="menu" style="width:18px;height:18px;"></i>
+    </div>
+
+    <div class="nav-left">
+      <div class="page-title">Dashboard</div>
+      <div class="breadcrumb">
+        <span>Smart Office</span>
+        <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+        <span style="color:var(--blue-2);">Home</span>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <i data-lucide="search" class="search-icon" style="width:15px;height:15px;"></i>
+      <input type="text" placeholder="Search people, tasks, meetings…"/>
+      <span style="font-size:11px;color:var(--text-3);background:var(--bg3);padding:2px 7px;border-radius:5px;border:1px solid var(--border);white-space:nowrap;">⌘K</span>
+    </div>
+
+    <div class="nav-right">
+      <div class="nav-icon-btn" title="Notifications">
+        <i data-lucide="bell" style="width:17px;height:17px;"></i>
+        <div class="notif-badge">5</div>
+      </div>
+      <div class="nav-icon-btn" title="Apps">
+        <i data-lucide="grid-3x3" style="width:17px;height:17px;"></i>
+      </div>
+
+      <div style="position:relative;">
+        <div class="avatar-btn" onclick="toggleProfile()">JS</div>
+        <div class="profile-dropdown" id="profile-dd">
+          <div class="pd-header">
+            <div class="pd-avatar">JS</div>
+            <div class="pd-info">
+              <div class="name">James Sullivan</div>
+              <div class="role">Admin · Pro Plan</div>
+            </div>
+          </div>
+          <div class="pd-links">
+            <a><i data-lucide="user" style="width:14px;height:14px;"></i> My Account</a>
+            <a><i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Statistics</a>
+            <a><i data-lucide="credit-card" style="width:14px;height:14px;"></i> Subscription</a>
+            <a><i data-lucide="settings" style="width:14px;height:14px;"></i> Settings</a>
+            <div class="pd-divider"></div>
+            <a class="logout"><i data-lucide="log-out" style="width:14px;height:14px;"></i> Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== CONTENT ===== -->
+  <main id="content">
+
+    <!-- HERO -->
+    <div class="hero fade-up">
+      <div class="hero-blob" style="width:300px;height:300px;background:var(--blue);top:-100px;right:-50px;opacity:0.08;"></div>
+      <div class="hero-blob" style="width:200px;height:200px;background:var(--accent);bottom:-60px;right:200px;opacity:0.05;"></div>
+      <div class="hero-date">
+        <i data-lucide="calendar" style="width:13px;height:13px;"></i>
+        <span id="current-date"></span>
+      </div>
+      <h1>Welcome back to Smart Office</h1>
+      <p>Manage your team, clients, budgets and communication from one central place.</p>
+
+      <div class="hero-stats">
+        <div class="stat-card">
+          <div class="sc-icon" style="background:rgba(59,110,246,0.1);">
+            <i data-lucide="users-2" style="width:18px;height:18px;color:#3b6ef6;"></i>
+          </div>
+          <div class="label">Active Teams</div>
+          <div class="value" data-count="14" data-target="14">0</div>
+          <div class="change up"><i data-lucide="trending-up" style="width:11px;height:11px;"></i> +3 this week</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-icon" style="background:rgba(16,185,129,0.1);">
+            <i data-lucide="dollar-sign" style="width:18px;height:18px;color:#10b981;"></i>
+          </div>
+          <div class="label">Monthly Budget</div>
+          <div class="value" data-count="128" data-target="128" data-prefix="$" data-suffix="K">0</div>
+          <div class="change up"><i data-lucide="trending-up" style="width:11px;height:11px;"></i> 82% used</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-icon" style="background:rgba(251,191,36,0.1);">
+            <i data-lucide="check-square" style="width:18px;height:18px;color:#f59e0b;"></i>
+          </div>
+          <div class="label">Pending Tasks</div>
+          <div class="value" data-count="47" data-target="47">0</div>
+          <div class="change down"><i data-lucide="trending-down" style="width:11px;height:11px;"></i> 12 due today</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-icon" style="background:rgba(99,102,241,0.1);">
+            <i data-lucide="message-circle" style="width:18px;height:18px;color:#6366f1;"></i>
+          </div>
+          <div class="label">New Messages</div>
+          <div class="value" data-count="234" data-target="234">0</div>
+          <div class="change up"><i data-lucide="trending-up" style="width:11px;height:11px;"></i> +28 unread</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div style="margin-bottom:28px;" class="fade-up">
+      <div class="section-header">
+        <div class="section-title">Quick Actions</div>
+      </div>
+      <div class="grid-4">
+        <div class="qa-card">
+          <div class="qa-icon" style="background:rgba(59,110,246,0.1);">
+            <i data-lucide="video" style="width:22px;height:22px;color:#3b6ef6;"></i>
+          </div>
+          <div class="qa-label">Start Meeting</div>
+        </div>
+        <div class="qa-card">
+          <div class="qa-icon" style="background:rgba(16,185,129,0.1);">
+            <i data-lucide="message-square" style="width:22px;height:22px;color:#10b981;"></i>
+          </div>
+          <div class="qa-label">Open Group Chat</div>
+        </div>
+        <div class="qa-card">
+          <div class="qa-icon" style="background:rgba(99,102,241,0.1);">
+            <i data-lucide="user-plus" style="width:22px;height:22px;color:#6366f1;"></i>
+          </div>
+          <div class="qa-label">Add Client</div>
+        </div>
+        <div class="qa-card">
+          <div class="qa-icon" style="background:rgba(245,158,11,0.1);">
+            <i data-lucide="plus-circle" style="width:22px;height:22px;color:#f59e0b;"></i>
+          </div>
+          <div class="qa-label">Create Task</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW: Activity + Meetings -->
+    <div class="grid-2" style="margin-bottom:28px;">
+
+      <div class="card fade-up">
+        <div class="section-header">
+          <div class="section-title">Recent Activity</div>
+          <div class="section-link">View all</div>
+        </div>
+        <div class="timeline">
+
+          <div class="tl-item">
+            <div class="tl-dot" style="background:rgba(59,110,246,0.1);">
+              <i data-lucide="video" style="width:16px;height:16px;color:#3b6ef6;"></i>
+            </div>
+            <div class="tl-body">
+              <div class="tl-title">Q3 Planning Meeting started</div>
+              <div class="tl-desc">Marketing team · 8 participants</div>
+            </div>
+            <div class="tl-time">2m ago</div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot" style="background:rgba(16,185,129,0.1);">
+              <i data-lucide="user-plus" style="width:16px;height:16px;color:#10b981;"></i>
+            </div>
+            <div class="tl-body">
+              <div class="tl-title">New client onboarded</div>
+              <div class="tl-desc">Nexus Corp added by Sarah K.</div>
+            </div>
+            <div class="tl-time">18m ago</div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot" style="background:rgba(245,158,11,0.1);">
+              <i data-lucide="check-circle-2" style="width:16px;height:16px;color:#f59e0b;"></i>
+            </div>
+            <div class="tl-body">
+              <div class="tl-title">Sprint #14 completed</div>
+              <div class="tl-desc">Dev team · 23 tasks closed</div>
+            </div>
+            <div class="tl-time">1h ago</div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot" style="background:rgba(99,102,241,0.1);">
+              <i data-lucide="dollar-sign" style="width:16px;height:16px;color:#6366f1;"></i>
+            </div>
+            <div class="tl-body">
+              <div class="tl-title">Budget approved — Design</div>
+              <div class="tl-desc">$24,000 allocated by finance</div>
+            </div>
+            <div class="tl-time">3h ago</div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot" style="background:rgba(239,68,68,0.08);">
+              <i data-lucide="alert-triangle" style="width:16px;height:16px;color:#ef4444;"></i>
+            </div>
+            <div class="tl-body">
+              <div class="tl-title">Server latency alert</div>
+              <div class="tl-desc">DevOps flagged · Resolved</div>
+            </div>
+            <div class="tl-time">5h ago</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card fade-up">
+        <div class="section-header">
+          <div class="section-title">Upcoming Meetings</div>
+          <div class="section-link">Schedule</div>
+        </div>
+
+        <div class="meeting-card">
+          <div class="meeting-time-block">
+            <div class="time">09:00</div>
+            <div class="ampm">AM</div>
+          </div>
+          <div class="meeting-divider"></div>
+          <div class="meeting-info">
+            <div class="mtitle">Product Roadmap Review</div>
+            <div class="msub">
+              <i data-lucide="map-pin" style="width:11px;height:11px;"></i>Room 3A · 45 min
+            </div>
+          </div>
+          <div class="meeting-avatars">
+            <div class="m-av">JK</div>
+            <div class="m-av">SR</div>
+            <div class="m-av">+4</div>
+          </div>
+          <div class="meeting-status ms-soon">Soon</div>
+        </div>
+
+        <div class="meeting-card">
+          <div class="meeting-time-block">
+            <div class="time">11:30</div>
+            <div class="ampm">AM</div>
+          </div>
+          <div class="meeting-divider"></div>
+          <div class="meeting-info">
+            <div class="mtitle">Client Onboarding — Nexus</div>
+            <div class="msub">
+              <i data-lucide="video" style="width:11px;height:11px;"></i>Zoom · 60 min
+            </div>
+          </div>
+          <div class="meeting-avatars">
+            <div class="m-av">AM</div>
+            <div class="m-av">TL</div>
+          </div>
+          <div class="meeting-status ms-today">Today</div>
+        </div>
+
+        <div class="meeting-card">
+          <div class="meeting-time-block">
+            <div class="time">02:00</div>
+            <div class="ampm">PM</div>
+          </div>
+          <div class="meeting-divider"></div>
+          <div class="meeting-info">
+            <div class="mtitle">HR — Monthly Sync</div>
+            <div class="msub">
+              <i data-lucide="map-pin" style="width:11px;height:11px;"></i>Room 1B · 30 min
+            </div>
+          </div>
+          <div class="meeting-avatars">
+            <div class="m-av">PW</div>
+            <div class="m-av">CC</div>
+            <div class="m-av">+2</div>
+          </div>
+          <div class="meeting-status ms-today">Today</div>
+        </div>
+
+        <div class="meeting-card">
+          <div class="meeting-time-block">
+            <div class="time">04:30</div>
+            <div class="ampm">PM</div>
+          </div>
+          <div class="meeting-divider"></div>
+          <div class="meeting-info">
+            <div class="mtitle">Investor Update Call</div>
+            <div class="msub">
+              <i data-lucide="video" style="width:11px;height:11px;"></i>Teams · 90 min
+            </div>
+          </div>
+          <div class="meeting-avatars">
+            <div class="m-av">RD</div>
+          </div>
+          <div class="meeting-status ms-pending">Pending</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ROW: Budget + Chat -->
+    <div class="grid-2" style="margin-bottom:28px;">
+
+      <div class="card fade-up">
+        <div class="section-header">
+          <div class="section-title">Budget Overview</div>
+          <div class="section-link">Full report</div>
+        </div>
+
+        <div class="mini-chart" id="mini-chart"></div>
+        <div class="chart-labels" id="chart-labels"></div>
+
+        <div style="margin-top:20px;">
+          <div class="budget-row">
+            <div style="flex:1;">
+              <div class="b-label">Operations</div>
+              <div class="budget-bar"><div class="budget-fill" style="width:0%" data-w="72%"></div></div>
+            </div>
+            <div class="b-amount" style="margin-left:16px;min-width:52px;text-align:right;">$52K</div>
+          </div>
+          <div class="budget-row">
+            <div style="flex:1;">
+              <div class="b-label">Marketing</div>
+              <div class="budget-bar"><div class="budget-fill" style="width:0%;background:linear-gradient(90deg,#6366f1,#818cf8)" data-w="45%"></div></div>
+            </div>
+            <div class="b-amount" style="margin-left:16px;min-width:52px;text-align:right;">$28K</div>
+          </div>
+          <div class="budget-row">
+            <div style="flex:1;">
+              <div class="b-label">Engineering</div>
+              <div class="budget-bar"><div class="budget-fill" style="width:0%;background:linear-gradient(90deg,#10b981,#059669)" data-w="88%"></div></div>
+            </div>
+            <div class="b-amount" style="margin-left:16px;min-width:52px;text-align:right;">$48K</div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:11.5px;color:var(--text-3);margin-bottom:4px;">Monthly Budget</div>
+            <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;">$128,000</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11.5px;color:var(--text-3);margin-bottom:4px;">Remaining</div>
+            <div style="font-size:18px;font-weight:700;color:var(--accent);">$23,040</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card fade-up">
+        <div class="section-header">
+          <div class="section-title">Team Messages</div>
+          <div class="section-link">Open Chat</div>
+        </div>
+
+        <div>
+          <div class="chat-msg">
+            <div class="chat-av" style="background:linear-gradient(135deg,#3b6ef6,#6366f1);">SR</div>
+            <div class="chat-body">
+              <div class="chat-header">
+                <div class="chat-name">Sarah R.</div>
+                <div class="chat-time">just now</div>
+              </div>
+              <div class="chat-text">Can we move the sprint review to Thursday? The designs aren't finalized yet.</div>
+            </div>
+            <div class="chat-unread">3</div>
+          </div>
+
+          <div class="chat-msg">
+            <div class="chat-av" style="background:linear-gradient(135deg,#10b981,#059669);">TL</div>
+            <div class="chat-body">
+              <div class="chat-header">
+                <div class="chat-name">Tom L.</div>
+                <div class="chat-time">4m ago</div>
+              </div>
+              <div class="chat-text">Nexus client docs uploaded to shared drive. Please review before the 11:30 call.</div>
+            </div>
+          </div>
+
+          <div class="chat-msg">
+            <div class="chat-av" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">PW</div>
+            <div class="chat-body">
+              <div class="chat-header">
+                <div class="chat-name">Paula W.</div>
+                <div class="chat-time">12m ago</div>
+              </div>
+              <div class="chat-text">Payroll run completed ✓ Reports sent to finance. Let me know if anything needs adjusting.</div>
+            </div>
+            <div class="chat-unread">1</div>
+          </div>
+
+          <div class="chat-msg">
+            <div class="chat-av" style="background:linear-gradient(135deg,#6366f1,#ec4899);">AM</div>
+            <div class="chat-body">
+              <div class="chat-header">
+                <div class="chat-name">Alex M.</div>
+                <div class="chat-time">28m ago</div>
+              </div>
+              <div class="chat-text">Landing page A/B test results are in — variant B wins by 18% CTR 🎉</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.background='var(--glass-2)'" onmouseleave="this.style.background='var(--bg)'">
+          <i data-lucide="pencil" style="width:15px;height:15px;color:var(--text-3);"></i>
+          <span style="font-size:13px;color:var(--text-3);flex:1;">Message your team…</span>
+          <i data-lucide="send" style="width:15px;height:15px;color:var(--blue-2);"></i>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ============================================================
+// INIT
+// ============================================================
+gsap.registerPlugin(ScrollTrigger);
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    gsap.to('#loader', { opacity: 0, duration: 0.5, onComplete: () => {
+      document.getElementById('loader').style.display = 'none';
+      initAnimations();
+    }});
+  }, 800);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  setDate();
+  buildChart();
+});
+
+function setDate() {
+  const d = new Date();
+  document.getElementById('current-date').textContent = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+let collapsed = false;
+
+function toggleSidebar() {
+  collapsed = !collapsed;
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed', collapsed);
+  if (collapsed) {
+    closeAllDropdowns();
+  }
+}
+
+function setActive(el) {
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.nav-dropdown').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('open'));
+  hideFloatingSub();
+}
+
+function toggleDropdown(ddId, navId, linkEl) {
+  if (collapsed) {
+    showFloatingSub(navId, linkEl);
+    return;
+  }
+  const dd = document.getElementById(ddId);
+  const isOpen = dd.classList.contains('open');
+
+  document.querySelectorAll('.nav-dropdown').forEach(d => { if(d !== dd) d.classList.remove('open'); });
+  document.querySelectorAll('.nav-link').forEach(l => { if(l !== linkEl) l.classList.remove('open'); });
+
+  if (!isOpen) {
+    dd.classList.add('open');
+    linkEl.classList.add('open');
+    setActive(linkEl);
+  } else {
+    dd.classList.remove('open');
+    linkEl.classList.remove('open');
+  }
+}
+
+const submenus = {
+  'nav-comm': { title: 'Communication', items: ['Group Chat','Client Chat','Notifications'] },
+  'nav-hr': { title: 'HR Management', items: ['Employees','Recruitment','Attendance'] },
+  'nav-meet': { title: 'Meetings', items: ['Meeting Rooms','Upcoming Meetings','Meeting History','Start Meeting'] },
+  'nav-clients': { title: 'Clients', items: ['Active Clients','Leads','Client Tracking'] },
+  'nav-admin': { title: 'Admin Panel', items: ['Users','Budget Management','Meeting Schedules','Custom Settings','Send Notifications','Start Meeting','Client Tracking'] },
+};
+
+let floatTimeout;
+function showFloatingSub(navId, linkEl) {
+  clearTimeout(floatTimeout);
+  const data = submenus[navId];
+  if (!data) return;
+  const fsub = document.getElementById('floating-sub');
+  document.getElementById('fsub-title').textContent = data.title;
+  const links = document.getElementById('fsub-links');
+  links.innerHTML = data.items.map(i => `<a>${i}</a>`).join('');
+
+  const rect = linkEl.getBoundingClientRect();
+  let top = rect.top;
+  const fh = Math.min(data.items.length * 36 + 50, window.innerHeight - 32);
+  if (top + fh > window.innerHeight - 16) top = window.innerHeight - fh - 16;
+  fsub.style.top = top + 'px';
+  fsub.classList.add('visible');
+}
+
+function hideFloatingSub() {
+  clearTimeout(floatTimeout);
+  floatTimeout = setTimeout(() => {
+    document.getElementById('floating-sub').classList.remove('visible');
+  }, 150);
+}
+
+document.querySelectorAll('#nav-comm,#nav-hr,#nav-meet,#nav-clients,#nav-admin').forEach(navItem => {
+  const link = navItem.querySelector('.nav-link');
+  navItem.addEventListener('mouseenter', () => {
+    if (collapsed) showFloatingSub(navItem.id, link);
+  });
+  navItem.addEventListener('mouseleave', () => {
+    if (collapsed) hideFloatingSub();
+  });
+});
+
+const fsub = document.getElementById('floating-sub');
+fsub.addEventListener('mouseenter', () => clearTimeout(floatTimeout));
+fsub.addEventListener('mouseleave', () => hideFloatingSub());
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#sidebar') && !e.target.closest('#floating-sub')) {
+    if (!collapsed) closeAllDropdowns();
+  }
+  if (!e.target.closest('.avatar-btn') && !e.target.closest('.profile-dropdown')) {
+    document.getElementById('profile-dd').classList.remove('open');
+  }
+});
+
+function openMobile() {
+  document.getElementById('sidebar').classList.add('mobile-open');
+  document.getElementById('overlay').classList.add('active');
+}
+function closeMobile() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('overlay').classList.remove('active');
+}
+
+// ============================================================
+// NAVBAR
+// ============================================================
+function toggleProfile() {
+  document.getElementById('profile-dd').classList.toggle('open');
+}
+
+// ============================================================
+// SCROLL PROGRESS
+// ============================================================
+window.addEventListener('scroll', () => {
+  const el = document.getElementById('scroll-progress');
+  const scrollTop = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  el.style.width = (docH > 0 ? (scrollTop/docH)*100 : 0) + '%';
+});
+
+// ============================================================
+// ANIMATIONS
+// ============================================================
+function initAnimations() {
+  gsap.utils.toArray('.fade-up').forEach((el, i) => {
+    gsap.to(el, {
+      opacity: 1, y: 0, duration: 0.6,
+      delay: i * 0.1,
+      ease: 'power3.out'
+    });
+  });
+
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.target);
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+    gsap.to({ val: 0 }, {
+      val: target, duration: 1.5, delay: 0.4,
+      ease: 'power2.out',
+      onUpdate: function() {
+        el.textContent = prefix + Math.round(this.targets()[0].val) + suffix;
+      }
+    });
+  });
+
+  setTimeout(() => {
+    document.querySelectorAll('.budget-fill').forEach(bar => {
+      bar.style.width = bar.dataset.w;
+    });
+  }, 600);
+}
+
+// ============================================================
+// MINI CHART
+// ============================================================
+function buildChart() {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'];
+  const vals = [62,78,54,88,70,95,82,105];
+  const max = Math.max(...vals);
+  const chart = document.getElementById('mini-chart');
+  const labels = document.getElementById('chart-labels');
+  vals.forEach((v, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    bar.style.height = '0%';
+    bar.title = `${months[i]}: $${v}K`;
+    chart.appendChild(bar);
+    const lbl = document.createElement('span');
+    lbl.textContent = months[i];
+    labels.appendChild(lbl);
+    setTimeout(() => {
+      bar.style.height = ((v/max)*100) + '%';
+    }, 700 + i*60);
+  });
+}
+
+setTimeout(() => lucide.createIcons(), 100);
+</script>
+</body>
+</html>
