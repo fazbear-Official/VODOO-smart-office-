@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub DB Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=IBM+Plex+Arabic:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #080c10;
+            --bg-secondary: #0d1117;
+            --bg-card: #111820;
+            --bg-elevated: #161d27;
+            --border: #1e2d3d;
+            --border-bright: #2a3f55;
+            --accent: #00d4ff;
+            --accent-dim: rgba(0, 212, 255, 0.12);
+            --accent-glow: rgba(0, 212, 255, 0.35);
+            --green: #00ff88;
+            --green-dim: rgba(0, 255, 136, 0.12);
+            --red: #ff4757;
+            --red-dim: rgba(255, 71, 87, 0.12);
+            --yellow: #ffd32a;
+            --yellow-dim: rgba(255, 211, 42, 0.12);
+            --purple: #a855f7;
+            --purple-dim: rgba(168, 85, 247, 0.12);
+            --text-primary: #e8edf3;
+            --text-secondary: #8b9ab4;
+            --text-muted: #445566;
+            --mono: 'JetBrains Mono', monospace;
+            --sans: 'IBM Plex Arabic', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Ambient glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(0,212,255,0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        /* Layout */
+        .app-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--accent-dim);
+            border: 1px solid rgba(0,212,255,0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 18px;
+            position: relative;
+        }
+
+        .header-icon::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(0,212,255,0.3), transparent 60%);
+            pointer-events: none;
+        }
+
+        .header-title {
+            font-family: var(--mono);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-family: var(--mono);
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .badge-online {
+            background: var(--green-dim);
+            border-color: rgba(0,255,136,0.3);
+            color: var(--green);
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* Stats Row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-bright);
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .stat-icon.blue { background: var(--accent-dim); color: var(--accent); }
+        .stat-icon.green { background: var(--green-dim); color: var(--green); }
+        .stat-icon.purple { background: var(--purple-dim); color: var(--purple); }
+        .stat-icon.yellow { background: var(--yellow-dim); color: var(--yellow); }
+
+        .stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; font-family: var(--mono); }
+        .stat-value { font-size: 15px; font-weight: 700; font-family: var(--mono); color: var(--text-primary); }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 16px;
+        }
+
+        /* Panel */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-header-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: var(--mono);
+        }
+
+        .panel-body { padding: 18px; }
+
+        /* Form */
+        .form-group { margin-bottom: 14px; }
+        .form-label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 12px;
+            color: var(--text-primary);
+            font-family: var(--mono);
+            font-size: 12px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 90px;
+            line-height: 1.5;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: #00badf;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--border-bright);
+            color: var(--text-primary);
+            background: var(--bg-elevated);
+        }
+
+        .btn-green {
+            background: var(--green-dim);
+            color: var(--green);
+            border-color: rgba(0,255,136,0.25);
+        }
+
+        .btn-green:hover { background: rgba(0,255,136,0.2); box-shadow: 0 0 12px rgba(0,255,136,0.2); }
+
+        .btn-yellow {
+            background: var(--yellow-dim);
+            color: var(--yellow);
+            border-color: rgba(255,211,42,0.25);
+        }
+
+        .btn-yellow:hover { background: rgba(255,211,42,0.2); }
+
+        .btn-red {
+            background: var(--red-dim);
+            color: var(--red);
+            border-color: rgba(255,71,87,0.25);
+        }
+
+        .btn-red:hover { background: rgba(255,71,87,0.2); }
+
+        .btn-ghost {
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+
+        .btn-ghost:hover { color: var(--text-primary); border-color: var(--border-bright); }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        /* Quick commands */
+        .quick-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .quick-btn {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            color: var(--text-secondary);
+            font-family: var(--mono);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .quick-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+        /* Left sidebar sections */
+        .sidebar { display: flex; flex-direction: column; gap: 14px; }
+
+        .section-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
+        /* Terminal */
+        .terminal-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .terminal-titlebar {
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 7px;
+        }
+
+        .terminal-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .terminal-label {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 16px;
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.6;
+            min-height: 360px;
+        }
+
+        .log-line {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 3px;
+            animation: fade-in 0.25s ease-out;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .log-time { color: var(--text-muted); flex-shrink: 0; font-size: 11px; padding-top: 1px; }
+        .log-type { flex-shrink: 0; font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 700; letter-spacing: 0.5px; }
+
+        .log-info .log-type { background: var(--accent-dim); color: var(--accent); }
+        .log-success .log-type { background: var(--green-dim); color: var(--green); }
+        .log-error .log-type { background: var(--red-dim); color: var(--red); }
+        .log-warn .log-type { background: var(--yellow-dim); color: var(--yellow); }
+        .log-cmd .log-type { background: var(--purple-dim); color: var(--purple); }
+
+        .log-msg { color: var(--text-secondary); word-break: break-all; }
+        .log-cmd .log-msg { color: var(--purple); }
+        .log-success .log-msg { color: var(--green); }
+        .log-error .log-msg { color: var(--red); }
+
+        /* Terminal input */
+        .terminal-input-bar {
+            border-top: 1px solid var(--border);
+            background: var(--bg-elevated);
+            padding: 10px 14px;
+        }
+
+        .terminal-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-prompt {
+            color: var(--accent);
+            font-family: var(--mono);
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: var(--mono);
+            font-size: 12px;
+            caret-color: var(--accent);
+        }
+
+        .terminal-run-btn {
+            background: var(--accent-dim);
+            border: 1px solid rgba(0,212,255,0.3);
+            border-radius: 6px;
+            color: var(--accent);
+            padding: 5px 12px;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .terminal-run-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .cmd-hints {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .cmd-hint {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--mono);
+            font-size: 10px;
+            cursor: pointer;
+            padding: 2px 5px;
+            border-radius: 3px;
+            transition: color 0.15s;
+        }
+
+        .cmd-hint:hover { color: var(--accent); background: var(--accent-dim); }
+
+        /* Response preview */
+        .response-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 14px;
+        }
+
+        .response-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-elevated);
+        }
+
+        .response-title {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            font-family: var(--mono);
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .status-success { background: var(--green-dim); color: var(--green); }
+        .status-error { background: var(--red-dim); color: var(--red); }
+        .status-idle { background: var(--bg-secondary); color: var(--text-muted); }
+
+        .response-body {
+            padding: 14px 16px;
+            max-height: 220px;
+            overflow: auto;
+        }
+
+        .code-block {
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Right column layout */
+        .right-col { display: flex; flex-direction: column; gap: 0; }
+
+        /* Notification Toast */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-bright);
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-family: var(--mono);
+            font-size: 13px;
+            color: var(--text-primary);
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        #toast.success { border-color: rgba(0,255,136,0.4); }
+        #toast.error { border-color: rgba(255,71,87,0.4); }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-family: var(--mono);
+            font-size: 12px;
+        }
+
+        .empty-state i { font-size: 28px; margin-bottom: 12px; display: block; opacity: 0.4; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .header { flex-wrap: wrap; gap: 12px; }
+        }
+
+        @media (max-width: 500px) {
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Loading spinner */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 0.8s linear infinite; display: inline-block; }
+
+        /* Monospace password field */
+        input[type="password"] { font-family: var(--mono) !important; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+<div class="app-wrapper">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-brand">
+            <div class="header-icon">
+                <i class="fas fa-terminal"></i>
+            </div>
+            <div>
+                <div class="header-title">GitHub DB Console</div>
+                <div class="header-subtitle">Interactive Database Management v2.0</div>
+            </div>
+        </div>
+        <div class="header-badges">
+            <div class="badge badge-online">
+                <span class="badge-dot"></span>
+                Online
+            </div>
+            <div class="badge" style="background:var(--accent-dim);border-color:rgba(0,212,255,0.3);color:var(--accent)">
+                <i class="fas fa-code-branch" style="font-size:10px"></i>
+                GitHub API v3
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-database"></i></div>
+            <div>
+                <div class="stat-label">Collection</div>
+                <div class="stat-value" id="statsCollection">users</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-plug"></i></div>
+            <div>
+                <div class="stat-label">Session</div>
+                <div class="stat-value" id="statsSession" style="color:var(--red)">غير نشط</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-code-branch"></i></div>
+            <div>
+                <div class="stat-label">Repository</div>
+                <div class="stat-value" id="statsRepo">DB</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fas fa-paper-plane"></i></div>
+            <div>
+                <div class="stat-label">Requests</div>
+                <div class="stat-value" id="statsRequests">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+
+            <!-- Session Config -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-header-icon" style="background:var(--accent-dim);color:var(--accent)"><i class="fas fa-key" style="font-size:11px"></i></div>
+                    <span class="panel-title">إعداد الجلسة</span>
+                </div>
+                <div class="panel-body">
+                    <div class="form-group">
+                        <label class="form-label">GitHub Token</label>
+                        <input type="password" id="token" class="form-control" value="..." placeholder="ghp_...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="username" class="form-control" value="fazbear-Official" placeholder="اسم المستخدم">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Repository</label>
+                        <input type="text" id="repo" class="form-control" value="DB" placeholder="اسم المستودع">
+                    </div>
+                    <button onclick="createSession()" class="btn btn-primary" id="sessionBtn">
+                        <i class="fas fa-link"></i> إنشاء جلسة
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Commands -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-header-icon" style="background:var(--yellow-dim);color:var(--yellow)"><i class="fas fa-bolt" style="font-size:11px"></i></div>
+                    <span class="panel-title">أوامر سريعة</span>
+                </div>
+                <div class="panel-body">
+                    <div class="quick-grid">
+                        <button onclick="quickCommand('users')" class="quick-btn">👤 users</button>
+                        <button onclick="quickCommand('products')" class="quick-btn">📦 products</button>
+                        <button onclick="quickCommand('orders')" class="quick-btn">🛒 orders</button>
+                        <button onclick="quickCommand('posts')" class="quick-btn">📝 posts</button>
+                    </div>
+                    <button onclick="getData()" class="btn btn-outline">
+                        <i class="fas fa-download"></i> جلب كل البيانات
+                    </button>
+                </div>
+            </div>
+
+            <!-- Data Operations -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-header-icon" style="background:var(--green-dim);color:var(--green)"><i class="fas fa-table" style="font-size:11px"></i></div>
+                    <span class="panel-title">عمليات البيانات</span>
+                </div>
+                <div class="panel-body">
+                    <div class="form-group">
+                        <label class="form-label">Collection</label>
+                        <input type="text" id="currentCollection" class="form-control" value="users" placeholder="اسم المجموعة">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Item ID <span style="color:var(--text-muted)">(للتعديل/الحذف)</span></label>
+                        <input type="text" id="itemId" class="form-control" placeholder="تلقائي عند الإضافة">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">JSON Data</label>
+                        <textarea id="jsonData" class="form-control">{
+  "name": "Ahmed Mohamed",
+  "age": 25,
+  "email": "ahmed@example.com"
+}</textarea>
+                    </div>
+                    <div class="btn-grid" style="gap:8px">
+                        <button onclick="addData()" class="btn btn-green"><i class="fas fa-plus"></i> إضافة</button>
+                        <button onclick="updateData()" class="btn btn-yellow"><i class="fas fa-pen"></i> تعديل</button>
+                        <button onclick="deleteData()" class="btn btn-red"><i class="fas fa-trash"></i> حذف</button>
+                        <button onclick="clearConsole()" class="btn btn-ghost"><i class="fas fa-broom"></i> مسح</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right: Terminal + Response -->
+        <div class="right-col">
+            <div class="terminal-panel">
+                <div class="terminal-titlebar">
+                    <div class="terminal-dots">
+                        <div class="terminal-dot dot-red"></div>
+                        <div class="terminal-dot dot-yellow"></div>
+                        <div class="terminal-dot dot-green"></div>
+                    </div>
+                    <div class="terminal-label">
+                        <i class="fas fa-terminal" style="color:var(--green)"></i>
+                        CONSOLE — GitHub DB
+                    </div>
+                    <div></div>
+                </div>
+
+                <div id="consoleOutput" class="terminal-output">
+                    <div class="empty-state">
+                        <i class="fas fa-terminal"></i>
+                        <div>جاهز لتلقي الأوامر</div>
+                        <div style="margin-top:6px;opacity:0.6">ابدأ بإنشاء جلسة جديدة</div>
+                    </div>
+                </div>
+
+                <div class="terminal-input-bar">
+                    <div class="terminal-input-row">
+                        <span class="terminal-prompt">$</span>
+                        <input type="text" id="commandInput" class="terminal-input" placeholder="اكتب أمرًا...">
+                        <button class="terminal-run-btn" onclick="executeCommand()">تشغيل</button>
+                    </div>
+                    <div class="cmd-hints">
+                        <span style="color:var(--text-muted);font-family:var(--mono);font-size:10px">أوامر: </span>
+                        <button class="cmd-hint" onclick="fillCommand('create-session')">create-session</button>
+                        <button class="cmd-hint" onclick="fillCommand('get users')">get [collection]</button>
+                        <button class="cmd-hint" onclick="fillCommand('add')">add</button>
+                        <button class="cmd-hint" onclick="fillCommand('update')">update</button>
+                        <button class="cmd-hint" onclick="fillCommand('delete')">delete</button>
+                        <button class="cmd-hint" onclick="fillCommand('clear')">clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response Preview -->
+            <div class="response-panel">
+                <div class="response-header">
+                    <div class="response-title">
+                        <i class="fas fa-code"></i>
+                        Response Preview
+                    </div>
+                    <span id="responseStatus" class="status-badge status-idle">IDLE</span>
+                </div>
+                <div class="response-body">
+                    <div id="responseContent" class="code-block" style="color:var(--text-muted)">// الاستجابة ستظهر هنا...</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast"><span id="toastIcon"></span><span id="toastMsg"></span></div>
+
+<script>
+    const API_URL = window.location.origin || 'https://vodoo-smart-office.vercel.app';
+    let currentSessionId = localStorage.getItem('githubSession');
+    let requestCount = 0;
+
+    // Toast
+    function showToast(msg, type = 'info') {
+        const toast = document.getElementById('toast');
+        const icons = { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' };
+        document.getElementById('toastIcon').textContent = icons[type] || 'ℹ️';
+        document.getElementById('toastMsg').textContent = msg;
+        toast.className = `show ${type}`;
+        setTimeout(() => toast.className = '', 3000);
+    }
+
+    // Log line
+    function log(msg, type = 'info') {
+        const output = document.getElementById('consoleOutput');
+        const empty = output.querySelector('.empty-state');
+        if (empty) empty.remove();
+
+        const types = {
+            info: { label: 'INFO', cls: 'log-info' },
+            success: { label: 'OK', cls: 'log-success' },
+            error: { label: 'ERR', cls: 'log-error' },
+            warn: { label: 'WARN', cls: 'log-warn' },
+            cmd: { label: 'CMD', cls: 'log-cmd' }
+        };
+        const t = types[type] || types.info;
+        const time = new Date().toLocaleTimeString('en', { hour12: false });
+
+        const div = document.createElement('div');
+        div.className = `log-line ${t.cls}`;
+        div.innerHTML = `
+            <span class="log-time">${time}</span>
+            <span class="log-type">${t.label}</span>
+            <span class="log-msg">${escapeHtml(msg)}</span>
+        `;
+        output.appendChild(div);
+        output.scrollTop = output.scrollHeight;
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function displayResponse(data, status, isError = false) {
+        const el = document.getElementById('responseContent');
+        const badge = document.getElementById('responseStatus');
+
+        el.innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+        if (isError) {
+            badge.className = 'status-badge status-error';
+            badge.textContent = `ERR ${status}`;
+        } else {
+            badge.className = 'status-badge status-success';
+            badge.textContent = `${status} OK`;
+        }
+    }
+
+    function syntaxHighlight(json) {
+        json = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, m => {
+            if (/^"/.test(m)) {
+                if (/:$/.test(m)) return `<span style="color:#79b8ff">${m}</span>`;
+                return `<span style="color:#9ecbff">${m}</span>`;
+            } else if (/true|false/.test(m)) return `<span style="color:#56d364">${m}</span>`;
+            else if (/null/.test(m)) return `<span style="color:#8b949e">${m}</span>`;
+            return `<span style="color:#f0883e">${m}</span>`;
+        });
+    }
+
+    function updateStats() {
+        document.getElementById('statsCollection').textContent = document.getElementById('currentCollection').value;
+        document.getElementById('statsRepo').textContent = document.getElementById('repo').value;
+        document.getElementById('statsRequests').textContent = requestCount;
+
+        const s = document.getElementById('statsSession');
+        if (currentSessionId) {
+            s.textContent = 'نشط';
+            s.style.color = 'var(--green)';
+        } else {
+            s.textContent = 'غير نشط';
+            s.style.color = 'var(--red)';
+        }
+    }
+
+    // Session
+    async function createSession() {
+        const token = document.getElementById('token').value;
+        const repo = document.getElementById('repo').value;
+        const username = document.getElementById('username').value;
+
+        if (!token || !repo || !username) {
+            showToast('يرجى ملء جميع الحقول', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('sessionBtn');
+        btn.innerHTML = '<i class="fas fa-circle-notch spinner"></i> جاري الاتصال...';
+        btn.disabled = true;
+
+        log(`create-session --user=${username} --repo=${repo}`, 'cmd');
+
+        try {
+            const res = await fetch(`${API_URL}/api/github/session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, repo, username })
+            });
+            const data = await res.json();
+            displayResponse(data, res.status);
+            requestCount++;
+            updateStats();
+
+            if (data.success) {
+                currentSessionId = data.sessionId;
+                localStorage.setItem('githubSession', data.sessionId);
+                log(`جلسة نشطة: ${data.sessionId.substring(0,20)}...`, 'success');
+                showToast('تم إنشاء الجلسة بنجاح', 'success');
+            } else {
+                log(`فشل: ${data.error}`, 'error');
+                showToast(data.error || 'فشل إنشاء الجلسة', 'error');
+            }
+        } catch (e) {
+            displayResponse({ error: e.message }, 500, true);
+            log(`خطأ في الاتصال: ${e.message}`, 'error');
+            showToast('خطأ في الاتصال بالخادم', 'error');
+        } finally {
+            btn.innerHTML = '<i class="fas fa-link"></i> إنشاء جلسة';
+            btn.disabled = false;
+            updateStats();
+        }
+    }
+
+    // Add
+    async function addData() {
+        if (!guardSession()) return;
+        const collection = document.getElementById('currentCollection').value;
+        const dataStr = document.getElementById('jsonData').value;
+
+        log(`add --collection=${collection}`, 'cmd');
+        try {
+            const parsed = JSON.parse(dataStr);
+            const res = await fetch(`${API_URL}/api/github/add`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: currentSessionId, collection, data: parsed })
+            });
+            const result = await res.json();
+            displayResponse(result, res.status);
+            requestCount++; updateStats();
+
+            if (result.success && result.data?.id) {
+                document.getElementById('itemId').value = result.data.id;
+                log(`تمت الإضافة — ID: ${result.data.id}`, 'success');
+                showToast('تمت إضافة البيانات بنجاح', 'success');
+            }
+        } catch (e) {
+            handleError(e);
+        }
+    }
+
+    // Get
+    async function getData() {
+        if (!guardSession()) return;
+        const collection = document.getElementById('currentCollection').value;
+        log(`get --collection=${collection}`, 'cmd');
+        try {
+            const res = await fetch(`${API_URL}/api/github/get?sessionId=${currentSessionId}&collection=${collection}`);
+            const data = await res.json();
+            displayResponse(data, res.status);
+            requestCount++; updateStats();
+            log(`تم جلب ${data.data?.items?.length || 0} عنصر`, 'success');
+            showToast(`${data.data?.items?.length || 0} عناصر`, 'success');
+        } catch (e) {
+            handleError(e);
+        }
+    }
+
+    // Update
+    async function updateData() {
+        if (!guardSession()) return;
+        const collection = document.getElementById('currentCollection').value;
+        const itemId = document.getElementById('itemId').value;
+        const dataStr = document.getElementById('jsonData').value;
+
+        if (!itemId) { showToast('يرجى إدخال معرف العنصر', 'error'); return; }
+        log(`update --collection=${collection} --id=${itemId}`, 'cmd');
+        try {
+            const parsed = JSON.parse(dataStr);
+            const res = await fetch(`${API_URL}/api/github/update`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: currentSessionId, collection, itemId, data: parsed })
+            });
+            const result = await res.json();
+            displayResponse(result, res.status);
+            requestCount++; updateStats();
+            log(`تم تحديث ${itemId}`, 'success');
+            showToast('تم التحديث بنجاح', 'success');
+        } catch (e) {
+            handleError(e);
+        }
+    }
+
+    // Delete
+    async function deleteData() {
+        if (!guardSession()) return;
+        const collection = document.getElementById('currentCollection').value;
+        const itemId = document.getElementById('itemId').value;
+
+        if (!itemId) { showToast('يرجى إدخال معرف العنصر', 'error'); return; }
+        if (!confirm(`حذف العنصر "${itemId}" من "${collection}"؟`)) return;
+
+        log(`delete --collection=${collection} --id=${itemId}`, 'cmd');
+        try {
+            const res = await fetch(`${API_URL}/api/github/delete`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: currentSessionId, collection, itemId })
+            });
+            const result = await res.json();
+            displayResponse(result, res.status);
+            requestCount++; updateStats();
+
+            if (result.success) {
+                document.getElementById('itemId').value = '';
+                log(`تم حذف ${itemId}`, 'success');
+                showToast('تم الحذف بنجاح', 'success');
+            }
+        } catch (e) {
+            handleError(e);
+        }
+    }
+
+    function quickCommand(col) {
+        document.getElementById('currentCollection').value = col;
+        updateStats();
+        getData();
+    }
+
+    function clearConsole() {
+        document.getElementById('consoleOutput').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-terminal"></i>
+                <div>تم مسح الكونسول</div>
+            </div>
+        `;
+        log('تم مسح الكونسول', 'info');
+    }
+
+    function fillCommand(cmd) {
+        document.getElementById('commandInput').value = cmd;
+        document.getElementById('commandInput').focus();
+    }
+
+    function executeCommand() {
+        const input = document.getElementById('commandInput').value.trim().toLowerCase();
+        if (!input) return;
+
+        if (input === 'create-session') createSession();
+        else if (input.startsWith('get')) {
+            const parts = input.split(' ');
+            if (parts[1]) {
+                document.getElementById('currentCollection').value = parts[1];
+                updateStats();
+            }
+            getData();
+        }
+        else if (input === 'add') addData();
+        else if (input === 'update') updateData();
+        else if (input === 'delete') deleteData();
+        else if (input === 'clear') clearConsole();
+        else {
+            log(`أمر غير معروف: "${input}" — الأوامر المتاحة: create-session, get, add, update, delete, clear`, 'warn');
+        }
+
+        document.getElementById('commandInput').value = '';
+    }
+
+    function guardSession() {
+        if (!currentSessionId) {
+            log('لا توجد جلسة نشطة! أنشئ جلسة أولاً.', 'error');
+            showToast('يجب إنشاء جلسة أولاً', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    function handleError(e) {
+        displayResponse({ error: e.message }, 500, true);
+        log(`خطأ: ${e.message}`, 'error');
+        showToast(e.message, 'error');
+    }
+
+    document.getElementById('commandInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') executeCommand();
+    });
+
+    document.getElementById('currentCollection').addEventListener('input', updateStats);
+    document.getElementById('repo').addEventListener('input', updateStats);
+
+    // Init
+    updateStats();
+    setTimeout(() => {
+        log('GitHub DB Console v2.0 — جاهز', 'success');
+        log('اكتب "create-session" أو استخدم الأزرار للبدء', 'info');
+        if (currentSessionId) log(`جلسة محفوظة: ${currentSessionId.substring(0,20)}...`, 'info');
+    }, 400);
+</script>
+</body>
+</html>
