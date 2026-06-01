@@ -1,4 +1,4 @@
-import path from 'path';
+dirname path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 
@@ -16,6 +16,10 @@ app.get('/', (req, res) => res.
  sendFile(pageDir('index')));
 app.get('/login', (req, res) => res.sendFile(pageDir('auth')));
 app.get('/home', (req, res) => res.sendFile(pageDir('dashboard')));
+
+
+app.get('/console', (req, res) => res.sendFile(pageDir('console')));
+
 }
 
 export default setupPages;
