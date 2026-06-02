@@ -23,17 +23,28 @@ class GithubStorage {
   }
   
   // استرجاع بيانات الجلسة
-  static getSession(sessionId) {
-    const session = sessionStore.get(sessionId);
-    if (!session) return null;
-    
-    if (Date.now() > session.expiresAt) {
-      sessionStore.delete(sessionId);
-      return null;
-    }
-    
-    return session;
+ static getSession(sessionId) {
+  console.log("STORE SIZE:", sessionStore.size);
+  console.log("SESSION ID:", sessionId);
+  console.log("ALL SESSIONS:", [...sessionStore.keys()]);
+
+  const session = sessionStore.get(sessionId);
+
+  if (!session) {
+    console.log("SESSION NOT FOUND");
+    return null;
   }
+
+  if (Date.now() > session.expiresAt) {
+    console.log("SESSION EXPIRED");
+    sessionStore.delete(sessionId);
+    return null;
+  }
+
+  console.log("SESSION FOUND");
+
+  return session;
+}
   
   // إنشاء Instance جديد من GitHubDB
   static async getDB(sessionId) {
